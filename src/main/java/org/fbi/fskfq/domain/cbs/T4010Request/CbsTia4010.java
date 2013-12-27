@@ -1,4 +1,4 @@
-package org.fbi.fskfq.domain.starring.T4010Request;
+package org.fbi.fskfq.domain.cbs.T4010Request;
 
 
 import org.fbi.linking.codec.dataformat.annotation.DataField;
@@ -11,7 +11,7 @@ import java.math.BigDecimal;
  * Date: 13-12-25
  */
 @SeperatedTextMessage(separator = "\\|", mainClass = true)
-public class TIA4010 {
+public class CbsTia4010 {
     @DataField(seq = 1)
     private String billtypeCode;
 

@@ -15,7 +15,7 @@ import java.util.List;
  * 应收数据查询回执
  */
 
-public class TpsTOA1401 extends TpsToa {
+public class TpsToa1401 extends TpsToa {
     public TpsToaHeader Head = new TpsToaHeader();
     public Body Body = new Body();
     public Signs Signs = new Signs();
@@ -127,8 +127,8 @@ public class TpsTOA1401 extends TpsToa {
     @Override
     public TpsToa toToa(String xml) {
         XStream xs = new XStream(new DomDriver());
-        xs.processAnnotations(TpsTOA1401.class);
-        return (TpsTOA1401) xs.fromXML(xml);
+        xs.processAnnotations(TpsToa1401.class);
+        return (TpsToa1401) xs.fromXML(xml);
     }
 
 }

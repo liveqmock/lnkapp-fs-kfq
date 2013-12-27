@@ -18,7 +18,7 @@ import java.util.Date;
  */
 
 @XStreamAlias("Root")
-public class TpsTIA2401 extends TpsTia {
+public class TpsTia2401 extends TpsTia {
     public TpsTiaHeader Head = new TpsTiaHeader();
     public Body Body = new Body();
     public Signs Signs = new Signs();
@@ -65,7 +65,7 @@ set_year	Äê¶È
         XmlFriendlyNameCoder replacer = new XmlFriendlyNameCoder("$", "_");
         HierarchicalStreamDriver hierarchicalStreamDriver = new XppDriver(replacer);
         XStream xs = new XStream(hierarchicalStreamDriver);
-        xs.processAnnotations(TpsTIA2401.class);
+        xs.processAnnotations(TpsTia2401.class);
         return "<?xml version=\"1.0\" encoding=\"GBK\"?>" + "\n" + xs.toXML(this);
     }
 }

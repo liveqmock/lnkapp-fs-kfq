@@ -1,4 +1,4 @@
-package org.fbi.fskfq.domain.starring.T9999Response;
+package org.fbi.fskfq.domain.cbs.T9999Response;
 
 
 import org.fbi.linking.codec.dataformat.annotation.DataField;

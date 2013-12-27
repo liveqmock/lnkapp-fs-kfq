@@ -10,7 +10,6 @@ import java.net.Socket;
 
 /**
  * 第三方服务器 工商E线通 client
- * 注：未作通讯粘包处理
  * User: zhanrui
  * Date: 13-11-27
  */
@@ -40,16 +39,16 @@ public class TpsSocketClient {
             os.flush();
 
             InputStream is = socket.getInputStream();
-            recvbuf = new byte[4];
+            recvbuf = new byte[8];
             int readNum = is.read(recvbuf);
-            if (readNum < 4) {
-                throw new RuntimeException("报文长度错误...");
+            if (readNum < 8) {
+                throw new RuntimeException("读取报文头长度部分错误...");
             }
             int msgLen = Integer.parseInt(new String(recvbuf).trim());
-            recvbuf = new byte[msgLen - 4];
+            recvbuf = new byte[msgLen - 8];
 
             readNum = is.read(recvbuf);   //阻塞读
-            if (readNum != msgLen - 4) {
+            if (readNum != msgLen - 8) {
                 throw new RuntimeException("报文长度错误...");
             }
         } finally {

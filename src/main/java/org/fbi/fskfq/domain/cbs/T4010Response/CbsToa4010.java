@@ -1,4 +1,4 @@
-package org.fbi.fskfq.domain.starring.T4010Response;
+package org.fbi.fskfq.domain.cbs.T4010Response;
 
 
 import org.fbi.linking.codec.dataformat.annotation.DataField;
@@ -9,7 +9,7 @@ import java.util.List;
 
 
 @SeperatedTextMessage(separator = "\\|", mainClass = true)
-public class TOA4010 {
+public class CbsToa4010 {
     @DataField(seq = 1)
     private String chrId;
 
@@ -95,8 +95,8 @@ public class TOA4010 {
     private String itemNum;
 
     @DataField(seq = 29)
-    @OneToMany(mappedTo = "org.fbi.fskfq.domain.starring.T4010Response.TOA4010Item", totalNumberField = "itemNum")
-    private java.util.List<TOA4010Item> items;
+    @OneToMany(mappedTo = "org.fbi.fskfq.domain.cbs.T4010Response.CbsToa4010Item", totalNumberField = "itemNum")
+    private java.util.List<CbsToa4010Item> items;
 
     public String getChrId() {
         return chrId;
@@ -322,11 +322,11 @@ public class TOA4010 {
         this.itemNum = itemNum;
     }
 
-    public List<TOA4010Item> getItems() {
+    public List<CbsToa4010Item> getItems() {
         return items;
     }
 
-    public void setItems(List<TOA4010Item> items) {
+    public void setItems(List<CbsToa4010Item> items) {
         this.items = items;
     }
 }

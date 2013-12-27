@@ -1,4 +1,4 @@
-package org.fbi.fskfq.domain.starring.T4010Response;
+package org.fbi.fskfq.domain.cbs.T4010Response;
 
 
 import org.fbi.linking.codec.dataformat.annotation.DataField;
@@ -13,7 +13,7 @@ import java.math.BigDecimal;
  * Time: обнГ5:44
  */
 @OneToManySeperatedTextMessage(separator = ",")
-public class TOA4010Item {
+public class CbsToa4010Item {
     @DataField(seq = 1)
     private String chr_id;
     @DataField(seq = 2)

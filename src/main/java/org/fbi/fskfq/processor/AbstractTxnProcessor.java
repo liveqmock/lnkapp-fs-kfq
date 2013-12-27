@@ -1,7 +1,7 @@
 package org.fbi.fskfq.processor;
 
 import org.apache.commons.lang.StringUtils;
-import org.fbi.fskfq.domain.starring.T9999Response.TOA9999;
+import org.fbi.fskfq.domain.cbs.T9999Response.TOA9999;
 import org.fbi.fskfq.helper.ProjectConfigManager;
 import org.fbi.fskfq.helper.TpsSocketClient;
 import org.fbi.fskfq.internal.AppActivator;
