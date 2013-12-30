@@ -13,14 +13,13 @@ import org.fbi.fskfq.domain.tps.base.TpsTiaSigns;
 import java.io.Serializable;
 
 /**
- * 应收数据查询请求
+ * 登录请求
  */
 
 @XStreamAlias("Root")
-public class TpsTia2401 extends TpsTia {
+public class TpsTia9905 extends TpsTia {
     public TpsTiaHeader Head = new TpsTiaHeader();
     public Body Body = new Body();
-    public TpsTiaSigns Signs = new TpsTiaSigns();
 
     @Override
     public TpsTiaHeader getHeader() {
@@ -34,8 +33,9 @@ public class TpsTia2401 extends TpsTia {
 
     @Override
     public TpsTiaSigns getSigns() {
-        return Signs;
+        return null;
     }
+
 
     public static class Body extends TpsTiaBody {
         public Object Object = new Object();
@@ -45,41 +45,27 @@ public class TpsTia2401 extends TpsTia {
         public Record Record = new Record();
     }
 
-
-    /*
-    billtype_code	缴款书样式编码
-bill_no	票号
-verify_no	全票面校验码
-bill_money	收款金额
-set_year	年度
-     */
     public static class Record implements Serializable {
-
-        public String billtype_code = "";
-        public String bill_no = "";
-        public String verify_no = "";
-        public String bill_money = "";
-        public String set_year = "";
+        public String user_code = "";
+        public String password = "";
+        public String new_password = "";
     }
 
     @Override
     public String toString() {
 
 /*
-        Head.dataType = "2401";
-        if (StringUtils.isEmpty(Head.msgId)) {
-            Head.msgId = new SimpleDateFormat("yyyyMMddHHmmsssss").format(new Date());
-        }
+        Head.msgId = new SimpleDateFormat("yyyyMMddHHmmsssss").format(new Date());
         Head.msgRef = Head.msgId;
-        if (StringUtils.isEmpty(Head.workDate)) {
-            Head.workDate = new SimpleDateFormat("yyyyMMdd").format(new Date());
+        if ("".equals(Head.workDate)) {
+            Head.workDate = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
         }
 */
 
         XmlFriendlyNameCoder replacer = new XmlFriendlyNameCoder("$", "_");
         HierarchicalStreamDriver hierarchicalStreamDriver = new XppDriver(replacer);
         XStream xs = new XStream(hierarchicalStreamDriver);
-        xs.processAnnotations(TpsTia2401.class);
+        xs.processAnnotations(TpsTia9905.class);
         return "<?xml version=\"1.0\" encoding=\"GBK\"?>" + "\n" + xs.toXML(this);
     }
 }

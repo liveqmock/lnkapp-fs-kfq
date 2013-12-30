@@ -40,12 +40,13 @@ public class T4010processor extends AbstractTxnProcessor {
         }
 
         //第三方通讯处理 -
-        TpsTia tpstia = assembleTpsRequestBean(tia);
+        TpsTia tpstia = assembleTpsRequestBean(tia, request);
         TpsToa tpsToa = null;
 
-        String sendMsgForTps = null;
+        byte[] sendTpsBuf;
         try {
-            sendMsgForTps = tpstia.toString();
+            sendTpsBuf = generateTxMsg(tpstia);
+            logger.info("第三方服务器请求报文：\n" +  new String(sendTpsBuf, "GBK"));
         } catch (Exception e) {
             logger.error("生成第三方服务器请求报文时出错.", e);
             response.setHeader("rtnCode", TxnRtnCode.TPSMSG_MARSHAL_FAILED.getCode());
@@ -53,7 +54,7 @@ public class T4010processor extends AbstractTxnProcessor {
         }
 
         try {
-            tpsToa = sendAndRecvForTps(sendMsgForTps);
+            tpsToa = sendAndRecvForTps(sendTpsBuf, tpstia.getHeader().dataType);
         } catch (SocketTimeoutException e) {
             logger.error("与第三方服务器通讯处理超时.", e);
             response.setHeader("rtnCode", TxnRtnCode.MSG_RECV_TIMEOUT.getCode());
@@ -97,7 +98,7 @@ public class T4010processor extends AbstractTxnProcessor {
     }
 
     //生成第三方请求报文对应BEAN
-    private TpsTia assembleTpsRequestBean(CbsTia4010 cbstia) {
+    private TpsTia assembleTpsRequestBean(CbsTia4010 cbstia, Stdp10ProcessorRequest request) {
         TpsTia2401 tpstia = new TpsTia2401();
         tpstia.Body.Object.Record.billtype_code = cbstia.getBilltypeCode();
         tpstia.Body.Object.Record.bill_no = cbstia.getBillNo();
@@ -105,23 +106,25 @@ public class T4010processor extends AbstractTxnProcessor {
         tpstia.Body.Object.Record.bill_money = cbstia.getBillMoney().toString();
         tpstia.Body.Object.Record.set_year = cbstia.getSetYear();
 
-        //处理报文头 TODO
+        //处理报文头 TODO 确认msgId的出处
+        tpstia.Head.msgId = request.getHeader("txnTime") + request.getHeader("serialNo");
+        tpstia.Head.msgRef =  request.getHeader("serialNo");
+        tpstia.Head.workDate = request.getHeader("txnTime").substring(0, 8);
+
+        // TODO
+        tpstia.Head.src = "CCB-370211";
+        tpstia.Head.des = "CZ-370211";
+        tpstia.Head.dataType = "";
         return tpstia;
     }
 
 
     //第三方服务器通讯
-    private TpsToa sendAndRecvForTps(String sendMsg) throws Exception {
-        String recvMsg = processThirdPartyServer(sendMsg);
-        logger.info("第三方服务器返回报文：" + recvMsg);
+    private TpsToa sendAndRecvForTps(byte[] sendTpsBuf, String txnCode) throws Exception {
+        byte[] recvBuf = processThirdPartyServer(sendTpsBuf, txnCode);
+        logger.info("第三方服务器返回报文：\n" +  new String(recvBuf, "GBK"));
 
-/*
-        TpsTOA4010 Tpstoa4010 = new TpsTOA4010();
-        FixedLengthTextDataFormat TpsRespDataFormat = new FixedLengthTextDataFormat(Tpstoa4010.getClass().getPackage().getName());
-        Tpstoa4010 = (TpsTOA4010) TpsRespDataFormat.fromMessage(recvMsg.getBytes("GBK"), "TpsTOA4010");
-        return Tpstoa4010;
-*/
-        return null;
+        return transXmlToBeanForTps(recvBuf);
     }
 
 

@@ -4,8 +4,8 @@ import com.thoughtworks.xstream.XStream;
 import com.thoughtworks.xstream.annotations.XStreamAlias;
 import com.thoughtworks.xstream.io.xml.DomDriver;
 import org.fbi.fskfq.domain.tps.base.TpsToa;
-import org.fbi.fskfq.domain.tps.base.xml.Signs;
-import org.fbi.fskfq.domain.tps.base.xml.TpsToaHeader;
+import org.fbi.fskfq.domain.tps.base.TpsToaHeader;
+import org.fbi.fskfq.domain.tps.base.TpsToaSigns;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -18,7 +18,7 @@ import java.util.List;
 public class TpsToa1401 extends TpsToa {
     public TpsToaHeader Head = new TpsToaHeader();
     public Body Body = new Body();
-    public Signs Signs = new Signs();
+    public TpsToaSigns Signs = new TpsToaSigns();
 
 
     public static class Body implements Serializable {

@@ -31,7 +31,6 @@ public class TpsSocketClient {
         try {
             socket.connect(new InetSocketAddress(addr, port), timeout);
             //socket.setSendBufferSize(100);
-
             socket.setSoTimeout(timeout);
 
             OutputStream os = socket.getOutputStream();
@@ -41,6 +40,9 @@ public class TpsSocketClient {
             InputStream is = socket.getInputStream();
             recvbuf = new byte[8];
             int readNum = is.read(recvbuf);
+            if (readNum == -1) {
+                throw new RuntimeException("服务器连接已关闭!");
+            }
             if (readNum < 8) {
                 throw new RuntimeException("读取报文头长度部分错误...");
             }
@@ -58,6 +60,7 @@ public class TpsSocketClient {
                 //
             }
         }
+        System.out.println("---:" +  new String(recvbuf,"GBK"));
         return recvbuf;
     }
 
