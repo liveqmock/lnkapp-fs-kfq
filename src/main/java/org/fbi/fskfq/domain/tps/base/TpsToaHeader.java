@@ -10,4 +10,15 @@ public class TpsToaHeader implements Serializable {
     public String workDate = "";              // 工作日期
     public String msgId = "";                 // 报文编号
 
+    @Override
+    public String toString() {
+        return "TpsToaHeader{" +
+                "src='" + src + '\'' +
+                ", des='" + des + '\'' +
+                ", dataType='" + dataType + '\'' +
+                ", msgRef='" + msgRef + '\'' +
+                ", workDate='" + workDate + '\'' +
+                ", msgId='" + msgId + '\'' +
+                '}';
+    }
 }

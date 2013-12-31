@@ -33,11 +33,11 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 
 /**
- * 1534010Ω…øÓ≤È—Ø
+ * 1534060∂‘’À
  * zhanrui
  * 20131227
  */
-public class T4010processor extends AbstractTxnProcessor {
+public class T4060processor extends AbstractTxnProcessor {
     private Logger logger = LoggerFactory.getLogger(this.getClass());
 
     @Override

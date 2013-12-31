@@ -31,6 +31,15 @@ public class TpsToa9910 extends TpsToa {
         public String ori_datatype = "";
         public String result = "";
         public String add_word = "";
+
+        @Override
+        public String toString() {
+            return "Record{" +
+                    "ori_datatype='" + ori_datatype + '\'' +
+                    ", result='" + result + '\'' +
+                    ", add_word='" + add_word + '\'' +
+                    '}';
+        }
     }
 
     @Override
@@ -40,4 +49,11 @@ public class TpsToa9910 extends TpsToa {
         return (TpsToa9910) xs.fromXML(xml);
     }
 
+    @Override
+    public String toString() {
+        return "TpsToa9910{" +
+                "Head=" + Head +
+                ", Body=" + Body.Object.Record.toString() +
+                '}';
+    }
 }

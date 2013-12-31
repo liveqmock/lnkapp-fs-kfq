@@ -18,9 +18,9 @@
         </environment>
     </environments>
     <mappers>
-        <mapper resource="org/fbi/aicqde/repository/mapper/common/CommonMapper.xml"/>
-        <mapper resource="org/fbi/aicqde/repository/mapper/FsKfqPaymentInfoMapper.xml"/>
-        <mapper resource="org/fbi/aicqde/repository/mapper/FsKfqPaymentItemMapper.xml"/>
+        <mapper resource="org/fbi/fskfq/repository/mapper/common/CommonMapper.xml"/>
+        <mapper resource="org/fbi/fskfq/repository/mapper/FsKfqPaymentInfoMapper.xml"/>
+        <mapper resource="org/fbi/fskfq/repository/mapper/FsKfqPaymentItemMapper.xml"/>
     </mappers>
 
 </configuration>

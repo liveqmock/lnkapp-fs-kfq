@@ -15,13 +15,13 @@ import java.math.BigDecimal;
 @OneToManySeperatedTextMessage(separator = ",")
 public class CbsToa4010Item {
     @DataField(seq = 1)
-    private String chr_id;
+    private String chrId;
     @DataField(seq = 2)
-    private String main_id;
+    private String mainId;
     @DataField(seq = 3)
-    private String in_bis_code;
+    private String inBisCode;
     @DataField(seq = 4)
-    private String in_bis_name;
+    private String inBisName;
     @DataField(seq = 5)
     private String measure;
     @DataField(seq = 6)
@@ -31,39 +31,39 @@ public class CbsToa4010Item {
     @DataField(seq = 8)
     private BigDecimal chargemoney;
     @DataField(seq = 9)
-    private String item_chkcode;
+    private String itemChkcode;
 
 
-    public String getChr_id() {
-        return chr_id;
+    public String getChrId() {
+        return chrId;
     }
 
-    public void setChr_id(String chr_id) {
-        this.chr_id = chr_id;
+    public void setChrId(String chrId) {
+        this.chrId = chrId;
     }
 
-    public String getMain_id() {
-        return main_id;
+    public String getMainId() {
+        return mainId;
     }
 
-    public void setMain_id(String main_id) {
-        this.main_id = main_id;
+    public void setMainId(String mainId) {
+        this.mainId = mainId;
     }
 
-    public String getIn_bis_code() {
-        return in_bis_code;
+    public String getInBisCode() {
+        return inBisCode;
     }
 
-    public void setIn_bis_code(String in_bis_code) {
-        this.in_bis_code = in_bis_code;
+    public void setInBisCode(String inBisCode) {
+        this.inBisCode = inBisCode;
     }
 
-    public String getIn_bis_name() {
-        return in_bis_name;
+    public String getInBisName() {
+        return inBisName;
     }
 
-    public void setIn_bis_name(String in_bis_name) {
-        this.in_bis_name = in_bis_name;
+    public void setInBisName(String inBisName) {
+        this.inBisName = inBisName;
     }
 
     public String getMeasure() {
@@ -98,26 +98,26 @@ public class CbsToa4010Item {
         this.chargemoney = chargemoney;
     }
 
-    public String getItem_chkcode() {
-        return item_chkcode;
+    public String getItemChkcode() {
+        return itemChkcode;
     }
 
-    public void setItem_chkcode(String item_chkcode) {
-        this.item_chkcode = item_chkcode;
+    public void setItemChkcode(String itemChkcode) {
+        this.itemChkcode = itemChkcode;
     }
 
     @Override
     public String toString() {
         return "TOA4010Item{" +
-                "chr_id='" + chr_id + '\'' +
-                ", main_id='" + main_id + '\'' +
-                ", in_bis_code='" + in_bis_code + '\'' +
-                ", in_bis_name='" + in_bis_name + '\'' +
+                "chrId='" + chrId + '\'' +
+                ", mainId='" + mainId + '\'' +
+                ", inBisCode='" + inBisCode + '\'' +
+                ", inBisName='" + inBisName + '\'' +
                 ", measure='" + measure + '\'' +
                 ", chargenum='" + chargenum + '\'' +
                 ", chargestandard='" + chargestandard + '\'' +
                 ", chargemoney=" + chargemoney +
-                ", item_chkcode='" + item_chkcode + '\'' +
+                ", itemChkcode='" + itemChkcode + '\'' +
                 '}';
     }
 }

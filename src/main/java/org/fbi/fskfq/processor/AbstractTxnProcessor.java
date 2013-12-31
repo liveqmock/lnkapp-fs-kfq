@@ -3,8 +3,7 @@ package org.fbi.fskfq.processor;
 import org.apache.commons.lang.StringUtils;
 import org.fbi.fskfq.domain.cbs.T9999Response.TOA9999;
 import org.fbi.fskfq.domain.tps.base.TpsTia;
-import org.fbi.fskfq.domain.tps.base.TpsToa;
-import org.fbi.fskfq.domain.tps.txn.TpsToa9000;
+import org.fbi.fskfq.domain.tps.base.TpsToaXmlBean;
 import org.fbi.fskfq.domain.tps.txn.TpsToa9910;
 import org.fbi.fskfq.helper.ProjectConfigManager;
 import org.fbi.fskfq.helper.TpsSocketClient;
@@ -53,10 +52,9 @@ public abstract class AbstractTxnProcessor extends Stdp10Processor {
 
     abstract protected void doRequest(Stdp10ProcessorRequest request, Stdp10ProcessorResponse response) throws ProcessorException, IOException;
 
-    protected String getErrorRespMsgForStarring(String errCode) throws Exception {
+    protected String getErrorRespMsgForStarring(String errMsg) throws Exception {
         TOA9999 toa = new TOA9999();
-        //toa.setErrCode(errCode);
-        toa.setErrMsg("交易失败-" + getRtnMsg(errCode));
+        toa.setErrMsg("交易失败-" + errMsg);
         String starringRespMsg;
         Map<String, Object> modelObjectsMap = new HashMap<String, Object>();
         modelObjectsMap.put(toa.getClass().getName(), toa);
@@ -86,8 +84,8 @@ public abstract class AbstractTxnProcessor extends Stdp10Processor {
     //生成通讯报文头
     protected byte[] generateTxMsg(TpsTia tpstia) throws UnsupportedEncodingException {
         String isSign = "0";
-        String authLen = "100";
-        String authCode = "10012121212";
+        String authCode = ProjectConfigManager.getInstance().getProperty("authCode");
+        String authLen = "" + authCode.length();
         String reserve = "               ";
 
         String sendTime = new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
@@ -134,46 +132,31 @@ public abstract class AbstractTxnProcessor extends Stdp10Processor {
         return client.call(sendTpsBuf);
     }
 
-    protected TpsToa transXmlToBeanForTps(byte[] buf){
+    //一般技术性异常报文处理 9910
+    protected TpsToa9910 transXmlToBeanForTps9910(byte[] buf){
+        int authLen = Integer.parseInt(new String(buf, 51, 3)) +1;
+        String msgdata = new String(buf, 69 + authLen, buf.length - 69 - authLen);
+
+        TpsToa9910 toa = new TpsToa9910();
+        return  (TpsToa9910)toa.toToa(msgdata);
+    }
+    protected TpsToaXmlBean transXmlToBeanForTps(byte[] buf){
         String txnCode = new String(buf, 0, 6).trim();
         int authLen = Integer.parseInt(new String(buf, 51, 3)) +1;
         String msgdata = new String(buf, 69 + authLen, buf.length - 69 - authLen);
-        System.out.println("===报文体：\n" + msgdata);
+        //System.out.println("===报文体：\n" + msgdata);
 
-        TpsToa toa = null;
-
-        if (!"9910".equals(txnCode) && !"9906".equals(txnCode) && !"9000".equals(txnCode)) {
-            Class clazz = null;
-            try {
-                clazz = Class.forName("org.fbi.fskfq.domain.tps.base.TpsToaXmlBean");
-            } catch (ClassNotFoundException e) {
-                e.printStackTrace();
-            }
-
-            TpsToa tmptoa = null;
-            try {
-                tmptoa = (TpsToa) clazz.newInstance();
-            } catch (InstantiationException e) {
-                e.printStackTrace();
-            } catch (IllegalAccessException e) {
-                e.printStackTrace();
-            }
-            toa = tmptoa.toBean(msgdata);
-            return toa;
-        }
-
-        if ("9000".equals(txnCode)) {
-            toa = new TpsToa9000();
-            TpsToa9000 toa9000 = (TpsToa9000) toa.toBean(msgdata);
-            return toa9000;
-            //throw new RuntimeException(toa9000.Body.Object.Record.result + toa9000.Body.Object.Record.add_word);
-        } else if ("9910".equals(txnCode)) {
-            toa = new TpsToa9910();
-            TpsToa9910 toa9910 = (TpsToa9910) toa.toBean(msgdata);
-            return toa9910;
-            //throw new RuntimeException(toa9910.Body.Object.Record.result + toa9910.Body.Object.Record.add_word);
-        } else {
-            return toa;
-        }
+        TpsToaXmlBean toa = new TpsToaXmlBean();
+        toa = (TpsToaXmlBean) toa.toToa(msgdata);
+        return toa;
     }
+
+    protected String substr(String content, String startStr, String endStr) {
+        int length = startStr.length();
+        int start = content.indexOf(startStr) + length;
+        int end = content.indexOf(endStr);
+        return content.substring(start, end);
+    }
+
+    //======================
 }
