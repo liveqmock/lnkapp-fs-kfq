@@ -31,6 +31,7 @@ import java.util.Properties;
  * Time: 下午6:16
  */
 public abstract class AbstractTxnProcessor extends Stdp10Processor {
+    protected static String CONTEXT_TPS_AUTHCODE = "CONTEXT_TPS_AUTHCODE";
 
     @Override
     public void service(Stdp10ProcessorRequest request, Stdp10ProcessorResponse response) throws ProcessorException, IOException {
@@ -142,9 +143,10 @@ public abstract class AbstractTxnProcessor extends Stdp10Processor {
     }
     protected TpsToaXmlBean transXmlToBeanForTps(byte[] buf){
         String txnCode = new String(buf, 0, 6).trim();
-        int authLen = Integer.parseInt(new String(buf, 51, 3)) +1;
+        int authLen = Integer.parseInt(new String(buf, 51, 3));
         String msgdata = new String(buf, 69 + authLen, buf.length - 69 - authLen);
-        //System.out.println("===报文体：\n" + msgdata);
+
+        System.out.println("===XML报文体：\n" + msgdata);
 
         TpsToaXmlBean toa = new TpsToaXmlBean();
         toa = (TpsToaXmlBean) toa.toToa(msgdata);

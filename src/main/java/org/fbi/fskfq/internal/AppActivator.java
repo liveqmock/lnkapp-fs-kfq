@@ -25,7 +25,7 @@ public class AppActivator implements BundleActivator {
 
         ProcessorFactory factory = new ProcessorFactory();
         Dictionary<String, Object> properties = new Hashtable<String, Object>();
-        properties.put("APPID", "FSKFQ");
+        properties.put("APPID", "FISKFQ");
         context.registerService(ProcessorManagerService.class.getName(), factory, properties);
 
         logger.info(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + " - Starting the FS-KFQ(FeiShui-KaiFaQu) app bundle...." );

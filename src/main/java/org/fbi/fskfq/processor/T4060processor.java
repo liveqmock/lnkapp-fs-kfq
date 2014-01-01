@@ -1,19 +1,10 @@
 package org.fbi.fskfq.processor;
 
 
-import org.apache.commons.lang.StringUtils;
 import org.apache.ibatis.session.SqlSession;
 import org.apache.ibatis.session.SqlSessionFactory;
-import org.fbi.fskfq.domain.cbs.T4010Request.CbsTia4010;
-import org.fbi.fskfq.domain.cbs.T4010Response.CbsToa4010;
-import org.fbi.fskfq.domain.cbs.T4010Response.CbsToa4010Item;
-import org.fbi.fskfq.domain.tps.base.TpsTia;
-import org.fbi.fskfq.domain.tps.base.TpsToaXmlBean;
-import org.fbi.fskfq.domain.tps.txn.TpsTia2401;
-import org.fbi.fskfq.domain.tps.txn.TpsToa9000;
-import org.fbi.fskfq.domain.tps.txn.TpsToa9910;
+import org.fbi.fskfq.domain.cbs.T4060Request.CbsTia4060;
 import org.fbi.fskfq.enums.TxnRtnCode;
-import org.fbi.fskfq.helper.FbiBeanUtils;
 import org.fbi.fskfq.helper.MybatisFactory;
 import org.fbi.fskfq.repository.dao.FsKfqPaymentInfoMapper;
 import org.fbi.fskfq.repository.dao.FsKfqPaymentItemMapper;
@@ -28,9 +19,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.net.SocketTimeoutException;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.Date;
+import java.util.List;
 
 /**
  * 1534060对账
@@ -42,7 +33,7 @@ public class T4060processor extends AbstractTxnProcessor {
 
     @Override
     public void doRequest(Stdp10ProcessorRequest request, Stdp10ProcessorResponse response) throws ProcessorException, IOException {
-        CbsTia4010 tia;
+        CbsTia4060 tia;
         try {
             tia = getCbsTia(request.getRequestBody());
             logger.info("特色业务平台请求报文TIA:" + tia.toString());
@@ -53,196 +44,42 @@ public class T4060processor extends AbstractTxnProcessor {
         }
 
 
-        //检查本地数据库信息
-        FsKfqPaymentInfo paymentInfo_db = selectPaymentInfoFromDB(tia.getBillNo());
-        if (paymentInfo_db != null) {
-            String billStatus = paymentInfo_db.getIncomestatus();
-            if (StringUtils.isEmpty(billStatus)) { //未缴款，但本地已存在信息
-                List<FsKfqPaymentItem> paymentItems = selectPaymentItemsFromDB(paymentInfo_db);
-                String starringRespMsg = getRespMsgForStarring(paymentInfo_db, paymentItems);
-                response.setHeader("rtnCode", TxnRtnCode.TXN_EXECUTE_SECCESS.getCode());
-                response.setResponseBody(starringRespMsg.getBytes(response.getCharacterEncoding()));
-                logger.info("===特色平台响应报文：\n" + starringRespMsg);
-                return;
-            } else { //已缴款
-                response.setHeader("rtnCode", TxnRtnCode.TXN_PAY_REPEATED.getCode());
-                logger.info("===此笔缴款单已缴款." );
-                return;
-            }
-        }
-
-
-        //第三方通讯处理 -
-        TpsTia tpsTia = assembleTpsRequestBean(tia, request);
-        TpsToaXmlBean tpsToa = null;
-
-        byte[] sendTpsBuf;
-        try {
-            sendTpsBuf = generateTxMsg(tpsTia);
-            logger.info("第三方服务器请求报文：\n" + new String(sendTpsBuf, "GBK"));
-        } catch (Exception e) {
-            logger.error("生成第三方服务器请求报文时出错.", e);
-            response.setHeader("rtnCode", TxnRtnCode.TPSMSG_MARSHAL_FAILED.getCode());
-            return;
-        }
-
-        try {
-            String dataType = tpsTia.getHeader().dataType;
-            byte[] recvTpsBuf = processThirdPartyServer(sendTpsBuf, dataType);
-            String recvTpsMsg = new String(recvTpsBuf, "GBK");
-            logger.info("第三方服务器返回报文：\n" + recvTpsMsg);
-
-            String rtnDataType = substr(recvTpsMsg, "<dataType>", "</dataType>").trim();
-            if ("9910".equals(rtnDataType)) { //技术性异常报文 9910
-                TpsToa9910 tpsToa9910 = transXmlToBeanForTps9910(recvTpsBuf);
-                //TODO 发起签到交易
-                logger.info("===第三方服务器返回报文(异常业务信息类)：\n" + tpsToa9910.toString());
-                response.setHeader("rtnCode", TxnRtnCode.TXN_EXECUTE_FAILED.getCode());
-                String starringRespMsg = getErrorRespMsgForStarring(tpsToa9910.Body.Object.Record.add_word);
-                response.setResponseBody(starringRespMsg.getBytes(response.getCharacterEncoding()));
-                logger.info("===特色平台响应报文(异常技术信息类9910)：\n" + starringRespMsg);
-                return;
-            } else { //业务类正常或异常报文 2401
-                tpsToa = transXmlToBeanForTps(recvTpsBuf);
-            }
-        } catch (SocketTimeoutException e) {
-            logger.error("与第三方服务器通讯处理超时.", e);
-            response.setHeader("rtnCode", TxnRtnCode.MSG_RECV_TIMEOUT.getCode());
-            return;
-        } catch (Exception e) {
-            logger.error("与第三方服务器通讯处理异常.", e);
-            response.setHeader("rtnCode", TxnRtnCode.MSG_COMM_ERROR.getCode());
-            return;
-        }
-
-        //处理第三方返回业务报文--
-        String starringRespMsg = "";
-
-        String result = tpsToa.getMaininfoMap().get("RESULT");
-        if (result != null) { //异常业务报文
-            TpsToa9000 tpsToa9000 = new TpsToa9000();
-            try {
-                FbiBeanUtils.copyProperties(tpsToa.getMaininfoMap(), tpsToa9000);
-                response.setHeader("rtnCode", TxnRtnCode.TXN_EXECUTE_FAILED.getCode());
-                starringRespMsg = getErrorRespMsgForStarring(tpsToa9000.getAddWord());
-                response.setResponseBody(starringRespMsg.getBytes(response.getCharacterEncoding()));
-                logger.info("===特色平台响应报文(异常业务信息类)：\n" + starringRespMsg);
-                return;
-            } catch (Exception e) {
-                logger.error("第三方服务器响应报文解析异常.", e);
-                response.setHeader("rtnCode", TxnRtnCode.TXN_EXECUTE_FAILED.getCode());
-                return;
-            }
-        }
-
-        FsKfqPaymentInfo paymentInfo = new FsKfqPaymentInfo();
-        List<FsKfqPaymentItem> paymentItems = new ArrayList<>();
-        try {
-            FbiBeanUtils.copyProperties(tpsToa.getMaininfoMap(), paymentInfo);
-            List<Map<String, String>> detailMaplist = tpsToa.getDetailMapList();
-            for (Map<String, String> detailMap : detailMaplist) {
-                FsKfqPaymentItem item = new FsKfqPaymentItem();
-                FbiBeanUtils.copyProperties(detailMap, item);
-                paymentItems.add(item);
-            }
-        } catch (Exception e) {
-            logger.error("第三方服务器响应报文解析异常.", e);
-            response.setHeader("rtnCode", TxnRtnCode.TXN_EXECUTE_FAILED.getCode());
-            return;
-        }
-
         //正常交易逻辑处理
         try {
-            processTxn(paymentInfo, paymentItems, request);
+//            processTxn(paymentInfo, paymentItems, request);
         } catch (Exception e) {
             response.setHeader("rtnCode", TxnRtnCode.TXN_EXECUTE_FAILED.getCode());
             try {
-                starringRespMsg = getErrorRespMsgForStarring(e.getMessage());
+                String starringRespMsg = getErrorRespMsgForStarring(e.getMessage());
+                response.setResponseBody(starringRespMsg.getBytes(response.getCharacterEncoding()));
+                logger.error("业务处理失败.", e);
+                return;
             } catch (Exception e1) {
                 throw new RuntimeException(e1);
             }
-            response.setResponseBody(starringRespMsg.getBytes(response.getCharacterEncoding()));
-            logger.error("业务处理失败.", e);
-            return;
         }
 
         //==特色平台响应==
         try {
-            starringRespMsg = getRespMsgForStarring(paymentInfo, paymentItems);
+            //String starringRespMsg = getRespMsgForStarring(paymentInfo, paymentItems);
             response.setHeader("rtnCode", TxnRtnCode.TXN_EXECUTE_SECCESS.getCode());
-            logger.info("===特色平台响应报文：\n" + starringRespMsg);
+            logger.info("===对账完成：成功");
         } catch (Exception e) {
             logger.error("特色平台响应报文处理失败.", e);
             throw new RuntimeException(e);
         }
-        response.setResponseBody(starringRespMsg.getBytes(response.getCharacterEncoding()));
     }
 
 
     //处理Starring请求报文
-    private CbsTia4010 getCbsTia(byte[] body) throws Exception {
-        CbsTia4010 tia = new CbsTia4010();
+    private CbsTia4060 getCbsTia(byte[] body) throws Exception {
+        CbsTia4060 tia = new CbsTia4060();
         SeperatedTextDataFormat starringDataFormat = new SeperatedTextDataFormat(tia.getClass().getPackage().getName());
-        tia = (CbsTia4010) starringDataFormat.fromMessage(new String(body, "GBK"), "CbsTia4010");
+        tia = (CbsTia4060) starringDataFormat.fromMessage(new String(body, "GBK"), "CbsTia4060");
         return tia;
     }
 
-    //生成第三方请求报文对应BEAN
-    private TpsTia assembleTpsRequestBean(CbsTia4010 cbstia, Stdp10ProcessorRequest request) {
-        TpsTia2401 tpstia = new TpsTia2401();
-        tpstia.Body.Object.Record.billtype_code = cbstia.getBilltypeCode();
-        tpstia.Body.Object.Record.bill_no = cbstia.getBillNo();
-        tpstia.Body.Object.Record.verify_no = cbstia.getVerifyNo();
-        tpstia.Body.Object.Record.bill_money = cbstia.getBillMoney().toString();
-        tpstia.Body.Object.Record.set_year = cbstia.getSetYear();
 
-        //处理报文头 TODO 确认msgId的出处
-        tpstia.Head.msgId = request.getHeader("txnTime") + request.getHeader("serialNo");
-        tpstia.Head.msgRef = request.getHeader("serialNo");
-        tpstia.Head.workDate = request.getHeader("txnTime").substring(0, 8);
-
-        // TODO
-        tpstia.Head.src = "CCB-370211";
-        tpstia.Head.des = "CZ-370211";
-        tpstia.Head.dataType = "2401";
-        return tpstia;
-    }
-
-
-    //第三方服务器通讯
-    private TpsToaXmlBean sendAndRecvForTps(byte[] sendTpsBuf, String txnCode) throws Exception {
-        byte[] recvBuf = processThirdPartyServer(sendTpsBuf, txnCode);
-        logger.info("第三方服务器返回报文：\n" + new String(recvBuf, "GBK"));
-
-        return transXmlToBeanForTps(recvBuf);
-    }
-
-
-    //生成CBS响应报文
-    private String getRespMsgForStarring(FsKfqPaymentInfo paymentInfo, List<FsKfqPaymentItem> paymentItems) {
-        CbsToa4010 cbsToa = new CbsToa4010();
-        FbiBeanUtils.copyProperties(paymentInfo, cbsToa);
-
-        List<CbsToa4010Item> cbsToaItems = new ArrayList<>();
-        for (FsKfqPaymentItem paymentItem : paymentItems) {
-            CbsToa4010Item cbsToaItem = new CbsToa4010Item();
-            FbiBeanUtils.copyProperties(paymentItem, cbsToaItem);
-            cbsToaItems.add(cbsToaItem);
-        }
-        cbsToa.setItems(cbsToaItems);
-        cbsToa.setItemNum("" + cbsToaItems.size());
-
-        String starringRespMsg = "";
-        Map<String, Object> modelObjectsMap = new HashMap<String, Object>();
-        modelObjectsMap.put(cbsToa.getClass().getName(), cbsToa);
-        SeperatedTextDataFormat starringDataFormat = new SeperatedTextDataFormat(cbsToa.getClass().getPackage().getName());
-        try {
-            starringRespMsg = (String) starringDataFormat.toMessage(modelObjectsMap);
-        } catch (Exception e) {
-            throw new RuntimeException("特色平台报文转换失败.", e);
-        }
-        return starringRespMsg;
-    }
 
     //=======业务逻辑处理=================================================
 

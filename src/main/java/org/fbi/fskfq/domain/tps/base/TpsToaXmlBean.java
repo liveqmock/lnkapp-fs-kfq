@@ -183,6 +183,28 @@ public class TpsToaXmlBean extends TpsToa {
                 "</body>" +
                 "</root>";
 
+        str= "<?xml version=\"1.0\" encoding=\"GBK\"?>\n" +
+                "<root>\n" +
+                "<head><src>CZ-370211</src>\n" +
+                "<des>CCB-370211</des>\n" +
+                "<dataType>1401</dataType>\n" +
+                "<msgId>14012013 000000000404</msgId>\n" +
+                "<msgRef>2013123119151433322</msgRef>\n" +
+                "<workDate>2013-12-31</workDate>\n" +
+                "</head>\n" +
+                "<body>\n" +
+                "<object name=\"\" description=\"\">\n" +
+                "\t<record>\n" +
+                "\t\t<attribute name=\"RESULT\" description=\"\">1401002</attribute>\n" +
+                "\t<attribute name=\"ADD_WORD\" description=\"\">缴款书已收款</attribute>\n" +
+                "\t<attribute name=\"ORI_ENTRUST_DATE\" description=\"\">20131231</attribute>\n" +
+                "\t<attribute name=\"ORI_SEND_ORGCODE\" description=\"\">CCB-370211</attribute>\n" +
+                "\t<attribute name=\"ORI_DATATYPE_CODE\" description=\"\">2401</attribute>\n" +
+                "\t</record>\n" +
+                "</object>\n" +
+                "</body>\n" +
+                "</root>";
+
         TpsToaXmlBean toa = new TpsToaXmlBean();
         toa = (TpsToaXmlBean) toa.toToa(str);
 

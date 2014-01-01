@@ -1,7 +1,6 @@
 package org.fbi.fskfq.processor;
 
 
-import org.apache.commons.lang.StringUtils;
 import org.apache.ibatis.session.SqlSession;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.fbi.fskfq.domain.cbs.T4010Request.CbsTia4010;
@@ -56,23 +55,29 @@ public class T4010processor extends AbstractTxnProcessor {
         //检查本地数据库信息
         FsKfqPaymentInfo paymentInfo_db = selectPaymentInfoFromDB(tia.getBillNo());
         if (paymentInfo_db != null) {
-            String billStatus = paymentInfo_db.getIncomestatus();
-            if (StringUtils.isEmpty(billStatus)) { //未缴款，但本地已存在信息
+            String billStatus = paymentInfo_db.getLnkBillStatus();
+            if ("0".equals(billStatus)) { //未缴款，但本地已存在信息
                 List<FsKfqPaymentItem> paymentItems = selectPaymentItemsFromDB(paymentInfo_db);
                 String starringRespMsg = getRespMsgForStarring(paymentInfo_db, paymentItems);
                 response.setHeader("rtnCode", TxnRtnCode.TXN_EXECUTE_SECCESS.getCode());
                 response.setResponseBody(starringRespMsg.getBytes(response.getCharacterEncoding()));
                 logger.info("===特色平台响应报文：\n" + starringRespMsg);
                 return;
-            } else { //已缴款
+            } else if ("1".equals(billStatus)){ //已缴款
                 response.setHeader("rtnCode", TxnRtnCode.TXN_PAY_REPEATED.getCode());
                 logger.info("===此笔缴款单已缴款." );
                 return;
+            } else if ("2".equals(billStatus)) { //已撤销
+                response.setHeader("rtnCode", TxnRtnCode.TXN_PAY_REPEATED.getCode());
+                logger.info("===此笔缴款单已撤销.");
+                return;
+            } else {
+                throw new RuntimeException("缴款单状态错误.");
             }
         }
 
 
-        //第三方通讯处理 -
+        //第三方通讯处理
         TpsTia tpsTia = assembleTpsRequestBean(tia, request);
         TpsToaXmlBean tpsToa = null;
 
@@ -96,6 +101,9 @@ public class T4010processor extends AbstractTxnProcessor {
             if ("9910".equals(rtnDataType)) { //技术性异常报文 9910
                 TpsToa9910 tpsToa9910 = transXmlToBeanForTps9910(recvTpsBuf);
                 //TODO 发起签到交易
+                T9905Processor t9905Processor = new T9905Processor();
+                t9905Processor.doRequest(request, response);
+
                 logger.info("===第三方服务器返回报文(异常业务信息类)：\n" + tpsToa9910.toString());
                 response.setHeader("rtnCode", TxnRtnCode.TXN_EXECUTE_FAILED.getCode());
                 String starringRespMsg = getErrorRespMsgForStarring(tpsToa9910.Body.Object.Record.add_word);
@@ -170,12 +178,12 @@ public class T4010processor extends AbstractTxnProcessor {
         try {
             starringRespMsg = getRespMsgForStarring(paymentInfo, paymentItems);
             response.setHeader("rtnCode", TxnRtnCode.TXN_EXECUTE_SECCESS.getCode());
+            response.setResponseBody(starringRespMsg.getBytes(response.getCharacterEncoding()));
             logger.info("===特色平台响应报文：\n" + starringRespMsg);
         } catch (Exception e) {
             logger.error("特色平台响应报文处理失败.", e);
             throw new RuntimeException(e);
         }
-        response.setResponseBody(starringRespMsg.getBytes(response.getCharacterEncoding()));
     }
 
 
@@ -277,14 +285,16 @@ public class T4010processor extends AbstractTxnProcessor {
             paymentInfo.setOperInitDate(new SimpleDateFormat("yyyyMMdd").format(new Date()));
             paymentInfo.setOperInitTime(new SimpleDateFormat("HHmmss").format(new Date()));
 
-            paymentInfo.setAreaCode("KaiFaQu-FeiShui");
-            paymentInfo.setHostAckFlag("0");
             paymentInfo.setArchiveFlag("0");
 
             paymentInfo.setHostBookFlag("0");
             paymentInfo.setHostChkFlag("0");
             paymentInfo.setFbBookFlag("0");
             paymentInfo.setFbChkFlag("0");
+
+            paymentInfo.setAreaCode("KaiFaQu-FeiShui");
+            paymentInfo.setHostAckFlag("0");
+            paymentInfo.setLnkBillStatus("0"); //初始化
 
             FsKfqPaymentInfoMapper infoMapper = session.getMapper(FsKfqPaymentInfoMapper.class);
             infoMapper.insert(paymentInfo);
