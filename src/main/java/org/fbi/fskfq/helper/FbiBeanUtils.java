@@ -44,6 +44,9 @@ public class FbiBeanUtils {
                                 writeMethod.setAccessible(true);
                             }
                             Object value = srcMap.get(mapKey);
+                            if (value == null) {
+                                break;
+                            }
                             //类型不匹配则转换
                             if (!(prop.getPropertyType().getName().equals(value.getClass().getName()))) {
                                 value = parseByType(prop.getPropertyType(), value.toString());
@@ -85,6 +88,9 @@ public class FbiBeanUtils {
                                 readMethod.setAccessible(true);
                             }
                             Object value = readMethod.invoke(source, new Object[0]);
+                            if (value == null) {
+                                break;
+                            }
                             if (!Modifier.isPublic(writeMethod.getDeclaringClass().getModifiers())) {
                                 writeMethod.setAccessible(true);
                             }

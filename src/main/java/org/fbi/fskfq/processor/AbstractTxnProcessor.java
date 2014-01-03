@@ -38,6 +38,8 @@ public abstract class AbstractTxnProcessor extends Stdp10Processor {
     protected static String TPS_ENCODING = "GBK";  //第三方服务器编码方式
     private Logger logger = LoggerFactory.getLogger(this.getClass());
 
+    protected static String tps_authcode = "";
+
     @Override
     public void service(Stdp10ProcessorRequest request, Stdp10ProcessorResponse response) throws ProcessorException, IOException {
         String txnCode = request.getHeader("txnCode");
@@ -52,6 +54,9 @@ public abstract class AbstractTxnProcessor extends Stdp10Processor {
             logger.info("特色平台请求报文:" + request.toString());
             doRequest(request, response);
             logger.info("特色平台响应报文:" + response.toString());
+        }catch (Exception e){
+            response.setHeader("rtnCode", TxnRtnCode.TXN_EXECUTE_FAILED.getCode());
+            throw new RuntimeException(e);
         } finally {
             MDC.remove("txnCode");
             MDC.remove("tellerId");
@@ -108,7 +113,13 @@ public abstract class AbstractTxnProcessor extends Stdp10Processor {
     //生成第三方服务器通讯报文头
     protected byte[] generateTpsTxMsgHeader(TpsTia tpstia, Stdp10ProcessorRequest request) throws UnsupportedEncodingException {
         String isSign = "0";
+/*
         String authCode = (String)request.getProcessorContext().getAttribute(CONTEXT_TPS_AUTHCODE);
+        if (StringUtils.isEmpty(authCode)) {
+            authCode = ProjectConfigManager.getInstance().getProperty("authCode");
+        }
+*/
+        String authCode = this.tps_authcode;
         if (StringUtils.isEmpty(authCode)) {
             authCode = ProjectConfigManager.getInstance().getProperty("authCode");
         }
@@ -179,6 +190,8 @@ public abstract class AbstractTxnProcessor extends Stdp10Processor {
     protected TpsToa9910 transXmlToBeanForTps9910(byte[] buf) {
         int authLen = Integer.parseInt(new String(buf, 51, 3));
         String msgdata = new String(buf, 69 + authLen, buf.length - 69 - authLen);
+        System.out.println("===XML报文体：\n" + msgdata);
+
 
         TpsToa9910 toa = new TpsToa9910();
         return (TpsToa9910) toa.toToa(msgdata);

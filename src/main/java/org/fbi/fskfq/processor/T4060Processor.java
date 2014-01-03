@@ -28,7 +28,7 @@ import java.util.List;
  * zhanrui
  * 20131227
  */
-public class T4060processor extends AbstractTxnProcessor {
+public class T4060Processor extends AbstractTxnProcessor {
     private Logger logger = LoggerFactory.getLogger(this.getClass());
 
     @Override
