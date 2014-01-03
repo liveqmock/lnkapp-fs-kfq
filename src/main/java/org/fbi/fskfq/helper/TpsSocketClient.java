@@ -60,7 +60,7 @@ public class TpsSocketClient {
                 //
             }
         }
-        System.out.println("---:" +  new String(recvbuf,"GBK"));
+        //System.out.println("---:" +  new String(recvbuf,"GBK"));
         return recvbuf;
     }
 

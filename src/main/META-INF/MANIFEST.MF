@@ -37,6 +37,7 @@ Import-Package: org.osgi.framework,
  javax.sql,
  org.ietf.jgss,
  org.fbi.linking.connector,
+ org.fbi.linking.connector.cbs10,
  org.fbi.linking.processor.standprotocol10,
  org.fbi.linking.processor
 Private-Package: lib,org.fbi.fskfq.internal

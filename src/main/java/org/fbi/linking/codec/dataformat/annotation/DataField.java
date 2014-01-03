@@ -34,8 +34,8 @@ public @interface DataField {
     //是否做trim处理
     boolean trim() default true;
 
-    //BogDecimal 精度
-    int precision() default 0;
+    //BogDecimal 精度  金额类可设置为2   -1代表不控制
+    int precision() default -1;
 
     //明细循环输出标志
     //int loop() default 0;

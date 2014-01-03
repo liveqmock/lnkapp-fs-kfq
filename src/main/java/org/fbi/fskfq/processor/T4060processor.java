@@ -48,15 +48,9 @@ public class T4060processor extends AbstractTxnProcessor {
         try {
 //            processTxn(paymentInfo, paymentItems, request);
         } catch (Exception e) {
-            response.setHeader("rtnCode", TxnRtnCode.TXN_EXECUTE_FAILED.getCode());
-            try {
-                String starringRespMsg = getErrorRespMsgForStarring(e.getMessage());
-                response.setResponseBody(starringRespMsg.getBytes(response.getCharacterEncoding()));
-                logger.error("业务处理失败.", e);
-                return;
-            } catch (Exception e1) {
-                throw new RuntimeException(e1);
-            }
+            assembleAbnormalCbsResponse(TxnRtnCode.TXN_EXECUTE_FAILED, e.getMessage(), response);
+            logger.error("业务处理失败.", e);
+            return;
         }
 
         //==特色平台响应==

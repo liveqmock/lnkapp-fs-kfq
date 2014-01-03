@@ -1,6 +1,5 @@
 package org.fbi.fskfq.helper;
 
-import java.beans.BeanInfo;
 import java.beans.Introspector;
 import java.beans.PropertyDescriptor;
 import java.lang.reflect.InvocationTargetException;
@@ -10,7 +9,6 @@ import java.math.BigDecimal;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.Iterator;
 import java.util.Map;
 
 /**
@@ -18,61 +16,83 @@ import java.util.Map;
  */
 public class FbiBeanUtils {
     private static String FIELD_DATE_FORMAT = "yyyy-MM-dd";
-    private static String[] FIELD_TYPE_SIMPLE = {"java.lang.Integer", "int", "java.util.Date", "java.math.BigDecimal"};
+    private static String[] FIELD_TYPE_SIMPLE = {"java.lang.String","java.lang.Integer", "int", "java.util.Date", "java.math.BigDecimal"};
     private static String FIELD_TYPE_INTEGER = "java.lang.Integer,int";
     private static String FIELD_TYPE_DATE = "java.util.Date";
     private static String FIELD_TYPE_BIGDECIMAL = "java.math.BigDecimal";
 
     public static void copyProperties(Map srcMap, Object targetObj) throws Exception {
-        BeanInfo targetBean = Introspector.getBeanInfo(targetObj.getClass());
-        PropertyDescriptor[] propertyDescriptors = targetBean.getPropertyDescriptors();
-
-        for (int i = 0; i < propertyDescriptors.length; i++) {
-            PropertyDescriptor prop = propertyDescriptors[i];
-            Method writeMethod = prop.getWriteMethod();
-            if (writeMethod != null) {
-                Iterator ite = srcMap.keySet().iterator();
-                while (ite.hasNext()) {
-                    String mapkey = (String) ite.next();
-                    //TODO 可先判断name中是否存在下划线
-                    String mapkeyTmp = toCamelStr(mapkey.toLowerCase());
-                    if (mapkeyTmp.equals(prop.getName())) {
-                        if (!Modifier.isPublic(writeMethod.getDeclaringClass().getModifiers())) {
-                            writeMethod.setAccessible(true);
-                        }
-                        Object value = srcMap.get(mapkey);
-                        //类型不匹配则转换
-                        if (!(prop.getPropertyType().getName().equals(value.getClass().getName()))) {
-                            value = parseByType(prop.getPropertyType(), value.toString());
-                        }
-                        writeMethod.invoke((Object) targetObj, new Object[]{value});
-                        break;
-                    }
-                }
-            }
-        }
+        FbiBeanUtils.copyProperties(srcMap, targetObj, false);
     }
 
-    public static void copyProperties(Object source, Object target) {
+    /**
+     * Map -> Bean
+     * @param isToCamel 是否将带下划线的字段名称 转换为 camel形式的名称
+     */
+    public static void copyProperties(Map srcMap, Object targetBean, boolean isToCamel)  {
         try {
-            BeanInfo targetbean = Introspector.getBeanInfo(target.getClass());
-            PropertyDescriptor[] propertyDescriptors = targetbean.getPropertyDescriptors();
-            for (int i = 0; i < propertyDescriptors.length; i++) {
-                PropertyDescriptor prop = propertyDescriptors[i];
+            PropertyDescriptor[] propertyDescriptors = Introspector.getBeanInfo(targetBean.getClass()).getPropertyDescriptors();
+            for (PropertyDescriptor prop : propertyDescriptors) {
                 Method writeMethod = prop.getWriteMethod();
                 if (writeMethod != null) {
-                    BeanInfo sourceBean = Introspector.getBeanInfo(source.getClass());
-                    PropertyDescriptor[] sourcepds = sourceBean.getPropertyDescriptors();
-                    for (int j = 0; j < sourcepds.length; j++) {
-                        if (sourcepds[j].getName().equals(prop.getName())) {
-                            Method rm = sourcepds[j].getReadMethod();
-                            if (!Modifier.isPublic(rm.getDeclaringClass().getModifiers())) {
-                                rm.setAccessible(true);
-                            }
-                            Object value = rm.invoke(source, new Object[0]);
+                    for (Object obj : srcMap.keySet()) {
+                        String mapKey = (String) obj;
+                        String mapkeyCamel = isToCamel ? toCamel(mapKey.toLowerCase()) : mapKey;
+                        String beanPropName = isToCamel ? toCamel(prop.getName()) : prop.getName();
+                        if (mapkeyCamel.equals(beanPropName)) {
                             if (!Modifier.isPublic(writeMethod.getDeclaringClass().getModifiers())) {
                                 writeMethod.setAccessible(true);
                             }
+                            Object value = srcMap.get(mapKey);
+                            //类型不匹配则转换
+                            if (!(prop.getPropertyType().getName().equals(value.getClass().getName()))) {
+                                value = parseByType(prop.getPropertyType(), value.toString());
+                            }
+                            writeMethod.invoke((Object) targetBean, new Object[]{value});
+                            break;
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Map->Bean copy 错误.", e);
+        }
+    }
+
+
+
+    public static void copyProperties(Object source, Object target) {
+        FbiBeanUtils.copyProperties(source, target, false);
+    }
+
+    /**
+     * Bean -> Bean
+     * @param isToCamel 是否将带下划线的字段名称 转换为 camel形式的名称
+     */
+    public static void copyProperties(Object source, Object target, boolean isToCamel) {
+        try {
+            PropertyDescriptor[] targetProps = Introspector.getBeanInfo(target.getClass()).getPropertyDescriptors();
+            for (PropertyDescriptor targetProp : targetProps) {
+                Method writeMethod = targetProp.getWriteMethod();
+                if (writeMethod != null) {
+                    PropertyDescriptor[] srcProps = Introspector.getBeanInfo(source.getClass()).getPropertyDescriptors();
+                    for (PropertyDescriptor srcProp : srcProps) {
+                        String srcPropName = isToCamel ? toCamel(srcProp.getName()) : srcProp.getName();
+                        String targetPropName = isToCamel ? toCamel(targetProp.getName()) : targetProp.getName();
+                        if (srcPropName.equals(targetPropName)) {
+                            Method readMethod = srcProp.getReadMethod();
+                            if (!Modifier.isPublic(readMethod.getDeclaringClass().getModifiers())) {
+                                readMethod.setAccessible(true);
+                            }
+                            Object value = readMethod.invoke(source, new Object[0]);
+                            if (!Modifier.isPublic(writeMethod.getDeclaringClass().getModifiers())) {
+                                writeMethod.setAccessible(true);
+                            }
+                            //类型不匹配则转换
+                            if (!(targetProp.getPropertyType().getName().equals(value.getClass().getName()))) {
+                                value = parseByType(targetProp.getPropertyType(), value.toString());
+                            }
+
                             writeMethod.invoke((Object) target, new Object[]{value});
                             break;
                         }
@@ -80,13 +100,15 @@ public class FbiBeanUtils {
                 }
             }
         } catch (Exception e) {
-            throw new RuntimeException("Bean copy 错误.",e);
+            throw new RuntimeException("Bean->Bean copy 错误.", e);
         }
     }
 
     //带下划线的字段名改为camel型
     //map->bean时使用
-    private static String toCamelStr(String srcStr) {
+    private static String toCamel(String srcStr) {
+        //TODO 可先判断name中是否存在下划线
+
         StringBuilder sb = new StringBuilder();
         boolean match = false;
         for (int i = 0; i < srcStr.length(); i++) {
@@ -117,19 +139,22 @@ public class FbiBeanUtils {
     }
 
 
-    private static Object parseByType(Class clazz, String str) throws ParseException, InstantiationException, IllegalAccessException, SecurityException, IllegalArgumentException, NoSuchMethodException, InvocationTargetException {
+    private static Object parseByType(Class targetClazz, String srcStr) throws ParseException, InstantiationException, IllegalAccessException, SecurityException, IllegalArgumentException, NoSuchMethodException, InvocationTargetException {
         Object obj = "";
-        String clazzName = clazz.getName().trim();
+        String clazzName = targetClazz.getName().trim();
         if (isSimpleType(clazzName)) {
             if (FIELD_TYPE_INTEGER.contains(clazzName)) {
-                obj = parseInteger(str);
+                obj = parseInteger(srcStr);
             } else if (FIELD_TYPE_DATE.contains(clazzName)) {
-                obj = parseDate(str);
+                obj = parseDate(srcStr);
             } else if (FIELD_TYPE_BIGDECIMAL.contains(clazzName)) {
-                obj = parseBigDecimal(str);
+                obj = parseBigDecimal(srcStr);
+            } else {
+                obj = srcStr;
             }
         } else {
-            obj = parseObject(clazz, str);
+            //obj = parseObject(targetClazz, srcStr);
+            throw new RuntimeException("复杂对象copy暂不支持.");
         }
         return obj;
     }
@@ -160,6 +185,7 @@ public class FbiBeanUtils {
             return date;
         }
     }
+
     private static BigDecimal parseBigDecimal(String str) throws ParseException {
         if (str == null || str.equals("")) {
             return null;

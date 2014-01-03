@@ -24,14 +24,14 @@ public class T9905Processor extends AbstractTxnProcessor {
         tia.Body.Object.Record.user_code = ProjectConfigManager.getInstance().getProperty("tps.txn.login.user_code");
         tia.Body.Object.Record.password = ProjectConfigManager.getInstance().getProperty("tps.txn.login.password");
         tia.Body.Object.Record.new_password = "";
-        tia.Head.src = ProjectConfigManager.getInstance().getProperty("tps.txn.login.src");
-        tia.Head.des = ProjectConfigManager.getInstance().getProperty("tps.txn.login.des");
-        tia.Head.dataType = "9905";
+        tia.getHeader().setSrc(ProjectConfigManager.getInstance().getProperty("tps.txn.login.src"));
+        tia.getHeader().setDes(ProjectConfigManager.getInstance().getProperty("tps.txn.login.des"));
+        tia.getHeader().setDataType("9905");
 
         try {
             String sendMsg = tia.toString();
 
-            String dataType = tia.getHeader().dataType;
+            String dataType = tia.getHeader().getDataType();
             byte[] recvTpsBuf = processThirdPartyServer(sendMsg.getBytes("GBK"), dataType);
             String recvTpsMsg = new String(recvTpsBuf, "GBK");
             logger.info("第三方服务器返回报文：\n" + recvTpsMsg);

@@ -11,12 +11,14 @@ import org.fbi.fskfq.domain.tps.base.TpsToaXmlBean;
 import org.fbi.fskfq.domain.tps.txn.TpsTia2401;
 import org.fbi.fskfq.domain.tps.txn.TpsToa9000;
 import org.fbi.fskfq.domain.tps.txn.TpsToa9910;
+import org.fbi.fskfq.enums.BillStatus;
 import org.fbi.fskfq.enums.TxnRtnCode;
 import org.fbi.fskfq.helper.FbiBeanUtils;
 import org.fbi.fskfq.helper.MybatisFactory;
 import org.fbi.fskfq.repository.dao.FsKfqPaymentInfoMapper;
 import org.fbi.fskfq.repository.dao.FsKfqPaymentItemMapper;
 import org.fbi.fskfq.repository.model.FsKfqPaymentInfo;
+import org.fbi.fskfq.repository.model.FsKfqPaymentInfoExample;
 import org.fbi.fskfq.repository.model.FsKfqPaymentItem;
 import org.fbi.fskfq.repository.model.FsKfqPaymentItemExample;
 import org.fbi.linking.codec.dataformat.SeperatedTextDataFormat;
@@ -51,31 +53,25 @@ public class T4010processor extends AbstractTxnProcessor {
             return;
         }
 
-
         //检查本地数据库信息
-        FsKfqPaymentInfo paymentInfo_db = selectPaymentInfoFromDB(tia.getBillNo());
+        FsKfqPaymentInfo paymentInfo_db = selectNotCanceledPaymentInfoFromDB(tia.getBillNo());
         if (paymentInfo_db != null) {
             String billStatus = paymentInfo_db.getLnkBillStatus();
-            if ("0".equals(billStatus)) { //未缴款，但本地已存在信息
-                List<FsKfqPaymentItem> paymentItems = selectPaymentItemsFromDB(paymentInfo_db);
-                String starringRespMsg = getRespMsgForStarring(paymentInfo_db, paymentItems);
-                response.setHeader("rtnCode", TxnRtnCode.TXN_EXECUTE_SECCESS.getCode());
-                response.setResponseBody(starringRespMsg.getBytes(response.getCharacterEncoding()));
-                logger.info("===特色平台响应报文：\n" + starringRespMsg);
-                return;
-            } else if ("1".equals(billStatus)){ //已缴款
-                response.setHeader("rtnCode", TxnRtnCode.TXN_PAY_REPEATED.getCode());
-                logger.info("===此笔缴款单已缴款." );
-                return;
-            } else if ("2".equals(billStatus)) { //已撤销
-                response.setHeader("rtnCode", TxnRtnCode.TXN_PAY_REPEATED.getCode());
-                logger.info("===此笔缴款单已撤销.");
-                return;
-            } else {
-                throw new RuntimeException("缴款单状态错误.");
+            switch (billStatus) {
+                case "0":  //未缴款，但本地已存在信息
+                    List<FsKfqPaymentItem> paymentItems = selectPaymentItemsFromDB(paymentInfo_db);
+                    String starringRespMsg = getRespMsgForStarring(paymentInfo_db, paymentItems);
+                    response.setHeader("rtnCode", TxnRtnCode.TXN_EXECUTE_SECCESS.getCode());
+                    response.setResponseBody(starringRespMsg.getBytes(response.getCharacterEncoding()));
+                    return;
+                case "1":  //已缴款
+                    response.setHeader("rtnCode", TxnRtnCode.TXN_PAY_REPEATED.getCode());
+                    logger.info("===此笔缴款单已缴款.");
+                    return;
+                default:
+                    throw new RuntimeException("缴款单状态错误.");
             }
         }
-
 
         //第三方通讯处理
         TpsTia tpsTia = assembleTpsRequestBean(tia, request);
@@ -83,8 +79,7 @@ public class T4010processor extends AbstractTxnProcessor {
 
         byte[] sendTpsBuf;
         try {
-            sendTpsBuf = generateTxMsg(tpsTia);
-            logger.info("第三方服务器请求报文：\n" + new String(sendTpsBuf, "GBK"));
+            sendTpsBuf = generateTpsTxMsgHeader(tpsTia, request);
         } catch (Exception e) {
             logger.error("生成第三方服务器请求报文时出错.", e);
             response.setHeader("rtnCode", TxnRtnCode.TPSMSG_MARSHAL_FAILED.getCode());
@@ -92,10 +87,9 @@ public class T4010processor extends AbstractTxnProcessor {
         }
 
         try {
-            String dataType = tpsTia.getHeader().dataType;
+            String dataType = tpsTia.getHeader().getDataType();
             byte[] recvTpsBuf = processThirdPartyServer(sendTpsBuf, dataType);
             String recvTpsMsg = new String(recvTpsBuf, "GBK");
-            logger.info("第三方服务器返回报文：\n" + recvTpsMsg);
 
             String rtnDataType = substr(recvTpsMsg, "<dataType>", "</dataType>").trim();
             if ("9910".equals(rtnDataType)) { //技术性异常报文 9910
@@ -103,12 +97,8 @@ public class T4010processor extends AbstractTxnProcessor {
                 //TODO 发起签到交易
                 T9905Processor t9905Processor = new T9905Processor();
                 t9905Processor.doRequest(request, response);
-
+                assembleAbnormalCbsResponse(TxnRtnCode.TXN_EXECUTE_FAILED, tpsToa9910.Body.Object.Record.add_word, response);
                 logger.info("===第三方服务器返回报文(异常业务信息类)：\n" + tpsToa9910.toString());
-                response.setHeader("rtnCode", TxnRtnCode.TXN_EXECUTE_FAILED.getCode());
-                String starringRespMsg = getErrorRespMsgForStarring(tpsToa9910.Body.Object.Record.add_word);
-                response.setResponseBody(starringRespMsg.getBytes(response.getCharacterEncoding()));
-                logger.info("===特色平台响应报文(异常技术信息类9910)：\n" + starringRespMsg);
                 return;
             } else { //业务类正常或异常报文 2401
                 tpsToa = transXmlToBeanForTps(recvTpsBuf);
@@ -131,10 +121,7 @@ public class T4010processor extends AbstractTxnProcessor {
             TpsToa9000 tpsToa9000 = new TpsToa9000();
             try {
                 FbiBeanUtils.copyProperties(tpsToa.getMaininfoMap(), tpsToa9000);
-                response.setHeader("rtnCode", TxnRtnCode.TXN_EXECUTE_FAILED.getCode());
-                starringRespMsg = getErrorRespMsgForStarring(tpsToa9000.getAddWord());
-                response.setResponseBody(starringRespMsg.getBytes(response.getCharacterEncoding()));
-                logger.info("===特色平台响应报文(异常业务信息类)：\n" + starringRespMsg);
+                assembleAbnormalCbsResponse(TxnRtnCode.TXN_EXECUTE_FAILED, tpsToa9000.getAddWord(), response);
                 return;
             } catch (Exception e) {
                 logger.error("第三方服务器响应报文解析异常.", e);
@@ -146,11 +133,11 @@ public class T4010processor extends AbstractTxnProcessor {
         FsKfqPaymentInfo paymentInfo = new FsKfqPaymentInfo();
         List<FsKfqPaymentItem> paymentItems = new ArrayList<>();
         try {
-            FbiBeanUtils.copyProperties(tpsToa.getMaininfoMap(), paymentInfo);
+            FbiBeanUtils.copyProperties(tpsToa.getMaininfoMap(), paymentInfo, true);
             List<Map<String, String>> detailMaplist = tpsToa.getDetailMapList();
             for (Map<String, String> detailMap : detailMaplist) {
                 FsKfqPaymentItem item = new FsKfqPaymentItem();
-                FbiBeanUtils.copyProperties(detailMap, item);
+                FbiBeanUtils.copyProperties(detailMap, item, true);
                 paymentItems.add(item);
             }
         } catch (Exception e) {
@@ -159,19 +146,19 @@ public class T4010processor extends AbstractTxnProcessor {
             return;
         }
 
+        //正常交易逻辑处理前检查返回报文中的单号是否与请求报文中一致
+        if (!tia.getBillNo().equals(paymentInfo.getBillNo())) {
+            assembleAbnormalCbsResponse(TxnRtnCode.TXN_EXECUTE_FAILED, "请求单号与第三方响应单号不符.", response);
+            logger.info("===特色平台响应报文(异常业务信息类)：\n" + new String(response.getResponseBody(), response.getCharacterEncoding()));
+            return;
+        }
+
         //正常交易逻辑处理
         try {
             processTxn(paymentInfo, paymentItems, request);
         } catch (Exception e) {
-            response.setHeader("rtnCode", TxnRtnCode.TXN_EXECUTE_FAILED.getCode());
-            try {
-                starringRespMsg = getErrorRespMsgForStarring(e.getMessage());
-            } catch (Exception e1) {
-                throw new RuntimeException(e1);
-            }
-            response.setResponseBody(starringRespMsg.getBytes(response.getCharacterEncoding()));
+            assembleAbnormalCbsResponse(TxnRtnCode.TXN_EXECUTE_FAILED, e.getMessage(), response);
             logger.error("业务处理失败.", e);
-            return;
         }
 
         //==特色平台响应==
@@ -179,7 +166,6 @@ public class T4010processor extends AbstractTxnProcessor {
             starringRespMsg = getRespMsgForStarring(paymentInfo, paymentItems);
             response.setHeader("rtnCode", TxnRtnCode.TXN_EXECUTE_SECCESS.getCode());
             response.setResponseBody(starringRespMsg.getBytes(response.getCharacterEncoding()));
-            logger.info("===特色平台响应报文：\n" + starringRespMsg);
         } catch (Exception e) {
             logger.error("特色平台响应报文处理失败.", e);
             throw new RuntimeException(e);
@@ -198,32 +184,23 @@ public class T4010processor extends AbstractTxnProcessor {
     //生成第三方请求报文对应BEAN
     private TpsTia assembleTpsRequestBean(CbsTia4010 cbstia, Stdp10ProcessorRequest request) {
         TpsTia2401 tpstia = new TpsTia2401();
-        tpstia.Body.Object.Record.billtype_code = cbstia.getBilltypeCode();
-        tpstia.Body.Object.Record.bill_no = cbstia.getBillNo();
-        tpstia.Body.Object.Record.verify_no = cbstia.getVerifyNo();
-        tpstia.Body.Object.Record.bill_money = cbstia.getBillMoney().toString();
-        tpstia.Body.Object.Record.set_year = cbstia.getSetYear();
+        TpsTia2401.BodyRecord record = ((TpsTia2401.Body) tpstia.getBody()).getObject().getRecord();
+        FbiBeanUtils.copyProperties(cbstia, record, true);
 
-        //处理报文头 TODO 确认msgId的出处
-        tpstia.Head.msgId = request.getHeader("txnTime") + request.getHeader("serialNo");
-        tpstia.Head.msgRef = request.getHeader("serialNo");
-        tpstia.Head.workDate = request.getHeader("txnTime").substring(0, 8);
-
-        // TODO
-        tpstia.Head.src = "CCB-370211";
-        tpstia.Head.des = "CZ-370211";
-        tpstia.Head.dataType = "2401";
+        generateTpsBizMsgHeader(tpstia, "2401", request);
         return tpstia;
     }
 
 
     //第三方服务器通讯
+/*
     private TpsToaXmlBean sendAndRecvForTps(byte[] sendTpsBuf, String txnCode) throws Exception {
         byte[] recvBuf = processThirdPartyServer(sendTpsBuf, txnCode);
         logger.info("第三方服务器返回报文：\n" + new String(recvBuf, "GBK"));
 
         return transXmlToBeanForTps(recvBuf);
     }
+*/
 
 
     //生成CBS响应报文
@@ -253,16 +230,28 @@ public class T4010processor extends AbstractTxnProcessor {
     }
 
     //=======业务逻辑处理=================================================
-
-    private  FsKfqPaymentInfo selectPaymentInfoFromDB(String billNo){
+    //查找未撤销的缴款单记录
+    private FsKfqPaymentInfo selectNotCanceledPaymentInfoFromDB(String billNo) {
         SqlSessionFactory sqlSessionFactory = MybatisFactory.ORACLE.getInstance();
-        FsKfqPaymentInfoMapper infoMapper;
+        FsKfqPaymentInfoMapper mapper;
         try (SqlSession session = sqlSessionFactory.openSession()) {
-            infoMapper = session.getMapper(FsKfqPaymentInfoMapper.class);
-            return infoMapper.selectByPrimaryKey(billNo);
+            mapper = session.getMapper(FsKfqPaymentInfoMapper.class);
+            FsKfqPaymentInfoExample example = new FsKfqPaymentInfoExample();
+            example.createCriteria()
+                    .andBillNoEqualTo(billNo)
+                    .andLnkBillStatusNotEqualTo(BillStatus.CANCELED.getCode());
+            List<FsKfqPaymentInfo> infos = mapper.selectByExample(example);
+            if (infos.size() == 0) {
+                return null;
+            }
+            if (infos.size() != 1) { //同一个缴款单号，未撤销的在表中只能存在一条记录
+                throw new RuntimeException("记录状态错误.");
+            }
+            return infos.get(0);
         }
     }
-    private  List<FsKfqPaymentItem> selectPaymentItemsFromDB(FsKfqPaymentInfo paymentInfo){
+
+    private List<FsKfqPaymentItem> selectPaymentItemsFromDB(FsKfqPaymentInfo paymentInfo) {
         SqlSessionFactory sqlSessionFactory = MybatisFactory.ORACLE.getInstance();
         try (SqlSession session = sqlSessionFactory.openSession()) {
             FsKfqPaymentItemExample example = new FsKfqPaymentItemExample();
@@ -271,7 +260,6 @@ public class T4010processor extends AbstractTxnProcessor {
             return infoMapper.selectByExample(example);
         }
     }
-
 
 
     private void processTxn(FsKfqPaymentInfo paymentInfo, List<FsKfqPaymentItem> paymentItems, Stdp10ProcessorRequest request) {

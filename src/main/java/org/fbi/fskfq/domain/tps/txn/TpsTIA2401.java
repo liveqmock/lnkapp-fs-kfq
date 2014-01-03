@@ -18,9 +18,9 @@ import java.io.Serializable;
 
 @XStreamAlias("Root")
 public class TpsTia2401 extends TpsTia {
-    public TpsTiaHeader Head = new TpsTiaHeader();
-    public Body Body = new Body();
-    public TpsTiaSigns Signs = new TpsTiaSigns();
+    private TpsTiaHeader Head = new TpsTiaHeader();
+    private Body Body = new Body();
+    private TpsTiaSigns Signs = new TpsTiaSigns();
 
     @Override
     public TpsTiaHeader getHeader() {
@@ -38,44 +38,88 @@ public class TpsTia2401 extends TpsTia {
     }
 
     public static class Body extends TpsTiaBody {
-        public Object Object = new Object();
+        private BodyObject Object = new BodyObject();
+
+        public BodyObject getObject() {
+            return Object;
+        }
+
+        public void setObject(BodyObject object) {
+            Object = object;
+        }
     }
 
-    public static class Object implements Serializable {
-        public Record Record = new Record();
+    public static class BodyObject implements Serializable {
+        private BodyRecord Record = new BodyRecord();
+
+        public BodyRecord getRecord() {
+            return Record;
+        }
+
+        public void setRecord(BodyRecord record) {
+            Record = record;
+        }
     }
 
 
     /*
-    billtype_code	缴款书样式编码
-bill_no	票号
-verify_no	全票面校验码
-bill_money	收款金额
-set_year	年度
+        billtype_code	缴款书样式编码
+        bill_no	票号
+        verify_no	全票面校验码
+        bill_money	收款金额
+        set_year	年度
      */
-    public static class Record implements Serializable {
+    public static class BodyRecord implements Serializable {
+        private String billtype_code = "";
+        private String bill_no = "";
+        private String verify_no = "";
+        private String bill_money = "";
+        private String set_year = "";
 
-        public String billtype_code = "";
-        public String bill_no = "";
-        public String verify_no = "";
-        public String bill_money = "";
-        public String set_year = "";
+        public String getBilltype_code() {
+            return billtype_code;
+        }
+
+        public void setBilltype_code(String billtype_code) {
+            this.billtype_code = billtype_code;
+        }
+
+        public String getBill_no() {
+            return bill_no;
+        }
+
+        public void setBill_no(String bill_no) {
+            this.bill_no = bill_no;
+        }
+
+        public String getVerify_no() {
+            return verify_no;
+        }
+
+        public void setVerify_no(String verify_no) {
+            this.verify_no = verify_no;
+        }
+
+        public String getBill_money() {
+            return bill_money;
+        }
+
+        public void setBill_money(String bill_money) {
+            this.bill_money = bill_money;
+        }
+
+        public String getSet_year() {
+            return set_year;
+        }
+
+        public void setSet_year(String set_year) {
+            this.set_year = set_year;
+        }
     }
 
+    //==================================
     @Override
     public String toString() {
-
-/*
-        Head.dataType = "2401";
-        if (StringUtils.isEmpty(Head.msgId)) {
-            Head.msgId = new SimpleDateFormat("yyyyMMddHHmmsssss").format(new Date());
-        }
-        Head.msgRef = Head.msgId;
-        if (StringUtils.isEmpty(Head.workDate)) {
-            Head.workDate = new SimpleDateFormat("yyyyMMdd").format(new Date());
-        }
-*/
-
         XmlFriendlyNameCoder replacer = new XmlFriendlyNameCoder("$", "_");
         HierarchicalStreamDriver hierarchicalStreamDriver = new XppDriver(replacer);
         XStream xs = new XStream(hierarchicalStreamDriver);
