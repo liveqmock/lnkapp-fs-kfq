@@ -177,7 +177,7 @@ public abstract class AbstractTxnProcessor extends Stdp10Processor {
 
     //一般技术性异常报文处理 9910
     protected TpsToa9910 transXmlToBeanForTps9910(byte[] buf) {
-        int authLen = Integer.parseInt(new String(buf, 51, 3)) + 1;
+        int authLen = Integer.parseInt(new String(buf, 51, 3));
         String msgdata = new String(buf, 69 + authLen, buf.length - 69 - authLen);
 
         TpsToa9910 toa = new TpsToa9910();

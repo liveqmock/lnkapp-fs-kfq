@@ -97,7 +97,8 @@ public class T4010processor extends AbstractTxnProcessor {
                 //TODO 发起签到交易
                 T9905Processor t9905Processor = new T9905Processor();
                 t9905Processor.doRequest(request, response);
-                assembleAbnormalCbsResponse(TxnRtnCode.TXN_EXECUTE_FAILED, tpsToa9910.Body.Object.Record.add_word, response);
+                assembleAbnormalCbsResponse(TxnRtnCode.TXN_EXECUTE_FAILED, "授权码变动，请重新发起交易。", response);
+                //assembleAbnormalCbsResponse(TxnRtnCode.TXN_EXECUTE_FAILED, tpsToa9910.Body.Object.Record.add_word, response);
                 logger.info("===第三方服务器返回报文(异常业务信息类)：\n" + tpsToa9910.toString());
                 return;
             } else { //业务类正常或异常报文 2401
