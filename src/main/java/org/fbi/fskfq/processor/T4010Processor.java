@@ -57,19 +57,18 @@ public class T4010Processor extends AbstractTxnProcessor {
         FsKfqPaymentInfo paymentInfo_db = selectNotCanceledPaymentInfoFromDB(tia.getBillNo());
         if (paymentInfo_db != null) {
             String billStatus = paymentInfo_db.getLnkBillStatus();
-            switch (billStatus) {
-                case "0":  //未缴款，但本地已存在信息
-                    List<FsKfqPaymentItem> paymentItems = selectPaymentItemsFromDB(paymentInfo_db);
-                    String starringRespMsg = getRespMsgForStarring(paymentInfo_db, paymentItems);
-                    response.setHeader("rtnCode", TxnRtnCode.TXN_EXECUTE_SECCESS.getCode());
-                    response.setResponseBody(starringRespMsg.getBytes(response.getCharacterEncoding()));
-                    return;
-                case "1":  //已缴款
-                    response.setHeader("rtnCode", TxnRtnCode.TXN_PAY_REPEATED.getCode());
-                    logger.info("===此笔缴款单已缴款.");
-                    return;
-                default:
-                    throw new RuntimeException("缴款单状态错误.");
+            if (billStatus.equals(BillStatus.INIT.getCode())) { //未缴款，但本地已存在信息
+                List<FsKfqPaymentItem> paymentItems = selectPaymentItemsFromDB(paymentInfo_db);
+                String starringRespMsg = getRespMsgForStarring(paymentInfo_db, paymentItems);
+                response.setHeader("rtnCode", TxnRtnCode.TXN_EXECUTE_SECCESS.getCode());
+                response.setResponseBody(starringRespMsg.getBytes(response.getCharacterEncoding()));
+                return;
+            }
+
+            if (billStatus.equals(BillStatus.PAYOFF.getCode())) { //已缴款
+                response.setHeader("rtnCode", TxnRtnCode.TXN_PAY_REPEATED.getCode());
+                logger.info("===此笔缴款单已缴款.");
+                return;
             }
         }
 
@@ -121,7 +120,7 @@ public class T4010Processor extends AbstractTxnProcessor {
         if (result != null) { //异常业务报文
             TpsToa9000 tpsToa9000 = new TpsToa9000();
             try {
-                FbiBeanUtils.copyProperties(tpsToa.getMaininfoMap(), tpsToa9000);
+                FbiBeanUtils.copyProperties(tpsToa.getMaininfoMap(), tpsToa9000, true);
                 assembleAbnormalCbsResponse(TxnRtnCode.TXN_EXECUTE_FAILED, tpsToa9000.getAddWord(), response);
                 return;
             } catch (Exception e) {

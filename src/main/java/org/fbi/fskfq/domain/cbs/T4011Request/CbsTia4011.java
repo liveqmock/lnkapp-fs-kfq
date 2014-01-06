@@ -4,6 +4,8 @@ package org.fbi.fskfq.domain.cbs.T4011Request;
 import org.fbi.linking.codec.dataformat.annotation.DataField;
 import org.fbi.linking.codec.dataformat.annotation.SeperatedTextMessage;
 
+import java.math.BigDecimal;
+
 @SeperatedTextMessage(separator = "\\|", mainClass = true)
 public class CbsTia4011 {
     @DataField(seq = 1)
@@ -13,10 +15,10 @@ public class CbsTia4011 {
     private String billtypeCode;
 
     @DataField(seq = 3)
-    private String billtypeName;
+    private String billNo;
 
     @DataField(seq = 4)
-    private String billNo;
+    private BigDecimal billMoney;
 
     @DataField(seq = 5)
     private String bankIndate;
@@ -62,14 +64,6 @@ public class CbsTia4011 {
 
     public void setBilltypeCode(String billtypeCode) {
         this.billtypeCode = billtypeCode;
-    }
-
-    public String getBilltypeName() {
-        return billtypeName;
-    }
-
-    public void setBilltypeName(String billtypeName) {
-        this.billtypeName = billtypeName;
     }
 
     public String getBillNo() {
@@ -160,13 +154,21 @@ public class CbsTia4011 {
         this.businessId = businessId;
     }
 
+    public BigDecimal getBillMoney() {
+        return billMoney;
+    }
+
+    public void setBillMoney(BigDecimal billMoney) {
+        this.billMoney = billMoney;
+    }
+
     @Override
     public String toString() {
         return "CbsTia4011{" +
                 "chrId='" + chrId + '\'' +
                 ", billtypeCode='" + billtypeCode + '\'' +
-                ", billtypeName='" + billtypeName + '\'' +
                 ", billNo='" + billNo + '\'' +
+                ", billMoney=" + billMoney +
                 ", bankIndate='" + bankIndate + '\'' +
                 ", incomestatus='" + incomestatus + '\'' +
                 ", pmCode='" + pmCode + '\'' +

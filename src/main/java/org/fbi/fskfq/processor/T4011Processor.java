@@ -49,18 +49,17 @@ public class T4011Processor extends AbstractTxnProcessor {
         FsKfqPaymentInfo paymentInfo = selectNotCanceledPaymentInfoFromDB(tia.getBillNo());
         if (paymentInfo == null) {
             assembleAbnormalCbsResponse(TxnRtnCode.TXN_EXECUTE_FAILED, "请先做查询交易.", response);
+            return;
         } else {
             String billStatus = paymentInfo.getLnkBillStatus();
-            switch (billStatus) {
-                case "0":  //未缴款，本地已存在信息 (正常)
-//                    logger.info("===特色平台响应报文：\n" + starringRespMsg);
-                    break;
-                case "1":  //已缴款
-                    response.setHeader("rtnCode", TxnRtnCode.TXN_PAY_REPEATED.getCode());
-                    logger.info("===此笔缴款单已缴款.");
-                    break;
-                default:
-                    throw new RuntimeException("缴款单状态错误.");
+            if (billStatus.equals(BillStatus.PAYOFF.getCode())) { //已缴款
+                response.setHeader("rtnCode", TxnRtnCode.TXN_PAY_REPEATED.getCode());
+                logger.info("===此笔缴款单已缴款.");
+                return;
+            }else if (!billStatus.equals(BillStatus.INIT.getCode())) {  //非初始状态
+                response.setHeader("rtnCode", TxnRtnCode.TXN_PAY_REPEATED.getCode());
+                logger.info("===此笔缴款单状态错误.");
+                return;
             }
         }
 
@@ -71,7 +70,7 @@ public class T4011Processor extends AbstractTxnProcessor {
         if (result != null) { //异常业务报文
             TpsToa9000 tpsToa9000 = new TpsToa9000();
             try {
-                FbiBeanUtils.copyProperties(tpsToa.getMaininfoMap(), tpsToa9000);
+                FbiBeanUtils.copyProperties(tpsToa.getMaininfoMap(), tpsToa9000, true);
                 assembleAbnormalCbsResponse(TxnRtnCode.TXN_EXECUTE_FAILED, tpsToa9000.getAddWord(), response);
             } catch (Exception e) {
                 logger.error("第三方服务器响应报文解析异常.", e);
@@ -201,7 +200,7 @@ public class T4011Processor extends AbstractTxnProcessor {
             paymentInfo.setFbBookFlag("1");
             paymentInfo.setFbChkFlag("0");
 
-            paymentInfo.setAreaCode("KaiFaQu-FeiShui");
+            //paymentInfo.setAreaCode("KaiFaQu-FeiShui");
             paymentInfo.setHostAckFlag("0");
             paymentInfo.setLnkBillStatus(BillStatus.PAYOFF.getCode()); //已缴款
 
