@@ -91,4 +91,17 @@ public class CbsTia4060 {
     public void setItems(List<CbsTia4060Item> items) {
         this.items = items;
     }
+
+    @Override
+    public String toString() {
+        return "CbsTia4060{" +
+                "year='" + year + '\'' +
+                ", areacode='" + areacode + '\'' +
+                ", totalamt='" + totalamt + '\'' +
+                ", startdate='" + startdate + '\'' +
+                ", enddate='" + enddate + '\'' +
+                ", itemNum='" + itemNum + '\'' +
+                ", items=" + items +
+                '}';
+    }
 }

@@ -5,7 +5,7 @@ import org.apache.ibatis.session.SqlSessionFactory;
 import org.fbi.fskfq.domain.cbs.T4040Request.CbsTia4040;
 import org.fbi.fskfq.domain.tps.base.TpsTia;
 import org.fbi.fskfq.domain.tps.base.TpsToaXmlBean;
-import org.fbi.fskfq.domain.tps.txn.TpsTia2402;
+import org.fbi.fskfq.domain.tps.txn.TpsTia2409;
 import org.fbi.fskfq.domain.tps.txn.TpsToa9000;
 import org.fbi.fskfq.domain.tps.txn.TpsToa9910;
 import org.fbi.fskfq.enums.BillStatus;
@@ -163,11 +163,11 @@ public class T4040Processor extends AbstractTxnProcessor {
 
     //生成第三方请求报文对应BEAN
     private TpsTia assembleTpsRequestBean(CbsTia4040 cbstia, Stdp10ProcessorRequest request) {
-        TpsTia2402 tpstia = new TpsTia2402();
-        TpsTia2402.BodyRecord record = ((TpsTia2402.Body) tpstia.getBody()).getObject().getRecord();
+        TpsTia2409 tpstia = new TpsTia2409();
+        TpsTia2409.BodyRecord record = ((TpsTia2409.Body) tpstia.getBody()).getObject().getRecord();
         FbiBeanUtils.copyProperties(cbstia, record, true);
 
-        generateTpsBizMsgHeader(tpstia, "2402", request);
+        generateTpsBizMsgHeader(tpstia, "2409", request);
         return tpstia;
     }
 
@@ -181,6 +181,7 @@ public class T4040Processor extends AbstractTxnProcessor {
             paymentInfo.setOperCancelTlrid(request.getHeader("tellerId"));
             paymentInfo.setOperCancelDate(new SimpleDateFormat("yyyyMMdd").format(new Date()));
             paymentInfo.setOperCancelTime(new SimpleDateFormat("HHmmss").format(new Date()));
+            paymentInfo.setOperCancelHostsn(request.getHeader("serialNo"));
 
 /*
             paymentInfo.setHostBookFlag("1");

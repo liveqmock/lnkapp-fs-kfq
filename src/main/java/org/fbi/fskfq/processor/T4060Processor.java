@@ -4,11 +4,13 @@ package org.fbi.fskfq.processor;
 import org.apache.ibatis.session.SqlSession;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.fbi.fskfq.domain.cbs.T4060Request.CbsTia4060;
+import org.fbi.fskfq.enums.BillStatus;
 import org.fbi.fskfq.enums.TxnRtnCode;
 import org.fbi.fskfq.helper.MybatisFactory;
 import org.fbi.fskfq.repository.dao.FsKfqPaymentInfoMapper;
 import org.fbi.fskfq.repository.dao.FsKfqPaymentItemMapper;
 import org.fbi.fskfq.repository.model.FsKfqPaymentInfo;
+import org.fbi.fskfq.repository.model.FsKfqPaymentInfoExample;
 import org.fbi.fskfq.repository.model.FsKfqPaymentItem;
 import org.fbi.fskfq.repository.model.FsKfqPaymentItemExample;
 import org.fbi.linking.codec.dataformat.SeperatedTextDataFormat;
@@ -19,8 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
+import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -44,23 +45,33 @@ public class T4060Processor extends AbstractTxnProcessor {
         }
 
 
-        //正常交易逻辑处理
-        try {
-//            processTxn(paymentInfo, paymentItems, request);
-        } catch (Exception e) {
-            assembleAbnormalCbsResponse(TxnRtnCode.TXN_EXECUTE_FAILED, e.getMessage(), response);
-            logger.error("业务处理失败.", e);
-            return;
+        //获取本地数据库信息
+        String startDate = tia.getStartdate().substring(0,4) + "-" +  tia.getStartdate().substring(4,6) +  "-" + tia.getStartdate().substring(6,8);
+        String endDate = tia.getEnddate().substring(0,4) +  "-" + tia.getEnddate().substring(4,6) +  "-" + tia.getEnddate().substring(6,8);
+        List<FsKfqPaymentInfo> infos = selectPayoffPaymentInfos(startDate, endDate);
+        BigDecimal totalAmt = new BigDecimal("0.00");
+        for (FsKfqPaymentInfo info : infos) {
+            BigDecimal infoAmt = info.getBillMoney();
+            List<FsKfqPaymentItem> items = selectPayoffPaymentItems(info);
+            BigDecimal totalItemsAmt = new BigDecimal("0.00");
+            for (FsKfqPaymentItem item : items) {
+                totalItemsAmt = totalItemsAmt.add(item.getChargemoney());
+            }
+            if (infoAmt.compareTo(totalItemsAmt) != 0) {
+                logger.error("缴款单总分不符, billNo=:" + info.getBillNo());
+                response.setHeader("rtnCode", TxnRtnCode.TXN_EXECUTE_FAILED.getCode());
+                response.setResponseBody("缴款单总分不符.".getBytes(response.getCharacterEncoding()));
+                return;
+            }
+            totalAmt = totalAmt.add(infoAmt);
         }
 
-        //==特色平台响应==
-        try {
-            //String starringRespMsg = getRespMsgForStarring(paymentInfo, paymentItems);
+        if (totalAmt.compareTo(new BigDecimal(tia.getTotalamt())) != 0) {
+            logger.error("对账失败,总金额不符.");
+            response.setHeader("rtnCode", TxnRtnCode.TXN_EXECUTE_FAILED.getCode());
+            response.setResponseBody("对账失败,总金额不符.".getBytes(response.getCharacterEncoding()));
+        } else {
             response.setHeader("rtnCode", TxnRtnCode.TXN_EXECUTE_SECCESS.getCode());
-            logger.info("===对账完成：成功");
-        } catch (Exception e) {
-            logger.error("特色平台响应报文处理失败.", e);
-            throw new RuntimeException(e);
         }
     }
 
@@ -76,62 +87,28 @@ public class T4060Processor extends AbstractTxnProcessor {
 
 
     //=======业务逻辑处理=================================================
-
-    private  FsKfqPaymentInfo selectPaymentInfoFromDB(String billNo){
+    //查找已缴款未撤销的缴款单记录
+    private List<FsKfqPaymentInfo>  selectPayoffPaymentInfos(String startDate, String endDate) {
         SqlSessionFactory sqlSessionFactory = MybatisFactory.ORACLE.getInstance();
-        FsKfqPaymentInfoMapper infoMapper;
+        FsKfqPaymentInfoMapper mapper;
         try (SqlSession session = sqlSessionFactory.openSession()) {
-            infoMapper = session.getMapper(FsKfqPaymentInfoMapper.class);
-            return infoMapper.selectByPrimaryKey(billNo);
+            mapper = session.getMapper(FsKfqPaymentInfoMapper.class);
+            FsKfqPaymentInfoExample example = new FsKfqPaymentInfoExample();
+            example.createCriteria()
+                    .andBankIndateBetween(startDate, endDate)
+                    .andLnkBillStatusEqualTo(BillStatus.PAYOFF.getCode());
+            return  mapper.selectByExample(example);
         }
     }
-    private  List<FsKfqPaymentItem> selectPaymentItemsFromDB(FsKfqPaymentInfo paymentInfo){
+    private List<FsKfqPaymentItem> selectPayoffPaymentItems(FsKfqPaymentInfo paymentInfo) {
         SqlSessionFactory sqlSessionFactory = MybatisFactory.ORACLE.getInstance();
+        FsKfqPaymentItemMapper mapper;
         try (SqlSession session = sqlSessionFactory.openSession()) {
+            mapper = session.getMapper(FsKfqPaymentItemMapper.class);
             FsKfqPaymentItemExample example = new FsKfqPaymentItemExample();
-            example.createCriteria().andChrIdEqualTo(paymentInfo.getChrId());
-            FsKfqPaymentItemMapper infoMapper = session.getMapper(FsKfqPaymentItemMapper.class);
-            return infoMapper.selectByExample(example);
-        }
-    }
-
-
-
-    private void processTxn(FsKfqPaymentInfo paymentInfo, List<FsKfqPaymentItem> paymentItems, Stdp10ProcessorRequest request) {
-        SqlSessionFactory sqlSessionFactory = MybatisFactory.ORACLE.getInstance();
-        SqlSession session = sqlSessionFactory.openSession();
-        try {
-            paymentInfo.setBankIndate(request.getHeader("txnTime").substring(0, 8));
-            paymentInfo.setBusinessId(request.getHeader("serialNo"));
-            paymentInfo.setOperInitBankid(request.getHeader("branchId"));
-            paymentInfo.setOperInitTlrid(request.getHeader("tellerId"));
-            paymentInfo.setOperInitDate(new SimpleDateFormat("yyyyMMdd").format(new Date()));
-            paymentInfo.setOperInitTime(new SimpleDateFormat("HHmmss").format(new Date()));
-
-            paymentInfo.setAreaCode("KaiFaQu-FeiShui");
-            paymentInfo.setHostAckFlag("0");
-            paymentInfo.setArchiveFlag("0");
-
-            paymentInfo.setHostBookFlag("0");
-            paymentInfo.setHostChkFlag("0");
-            paymentInfo.setFbBookFlag("0");
-            paymentInfo.setFbChkFlag("0");
-
-            FsKfqPaymentInfoMapper infoMapper = session.getMapper(FsKfqPaymentInfoMapper.class);
-            infoMapper.insert(paymentInfo);
-
-            FsKfqPaymentItemMapper itemMapper = session.getMapper(FsKfqPaymentItemMapper.class);
-            int i = 0;
-            for (FsKfqPaymentItem item : paymentItems) {
-                i++;
-                itemMapper.insert(item);
-            }
-            session.commit();
-        } catch (Exception e) {
-            session.rollback();
-            throw new RuntimeException("业务逻辑处理失败。", e);
-        } finally {
-            session.close();
+            example.createCriteria()
+                    .andMainPkidEqualTo(paymentInfo.getChrId());
+            return mapper.selectByExample(example);
         }
     }
 

@@ -2,10 +2,11 @@ package org.fbi.fskfq.processor;
 
 import org.apache.ibatis.session.SqlSession;
 import org.apache.ibatis.session.SqlSessionFactory;
-import org.fbi.fskfq.domain.cbs.T4011Request.CbsTia4011;
+import org.fbi.fskfq.domain.cbs.T4013Request.CbsTia4013;
+import org.fbi.fskfq.domain.cbs.T4013Request.CbsTia4013Item;
 import org.fbi.fskfq.domain.tps.base.TpsTia;
 import org.fbi.fskfq.domain.tps.base.TpsToaXmlBean;
-import org.fbi.fskfq.domain.tps.txn.TpsTia2402;
+import org.fbi.fskfq.domain.tps.txn.TpsTia2457;
 import org.fbi.fskfq.domain.tps.txn.TpsToa9000;
 import org.fbi.fskfq.domain.tps.txn.TpsToa9910;
 import org.fbi.fskfq.enums.BillStatus;
@@ -25,18 +26,19 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.SocketTimeoutException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
 /**
  * Created by zhanrui on 13-12-31.
- * 缴款交易
+ * 手工票交易
  */
-public class T4011Processor extends AbstractTxnProcessor {
+public class T4013Processor extends AbstractTxnProcessor {
     private Logger logger = LoggerFactory.getLogger(this.getClass());
 
     public void doRequest(Stdp10ProcessorRequest request, Stdp10ProcessorResponse response) throws ProcessorException, IOException {
-        CbsTia4011 tia;
+        CbsTia4013 tia;
         try {
             tia = getCbsTia(request.getRequestBody());
         } catch (Exception e) {
@@ -47,10 +49,7 @@ public class T4011Processor extends AbstractTxnProcessor {
 
         //检查本地数据库信息
         FsKfqPaymentInfo paymentInfo = selectNotCanceledPaymentInfoFromDB(tia.getBillNo());
-        if (paymentInfo == null) {
-            assembleAbnormalCbsResponse(TxnRtnCode.TXN_EXECUTE_FAILED, "请先做查询交易.", response);
-            return;
-        } else {
+        if (paymentInfo != null) {
             String billStatus = paymentInfo.getLnkBillStatus();
             if (billStatus.equals(BillStatus.PAYOFF.getCode())) { //已缴款
                 response.setHeader("rtnCode", TxnRtnCode.TXN_PAY_REPEATED.getCode());
@@ -77,6 +76,7 @@ public class T4011Processor extends AbstractTxnProcessor {
                 response.setHeader("rtnCode", TxnRtnCode.TXN_EXECUTE_FAILED.getCode());
             }
         } else { //正常交易逻辑处理
+/*
             try {
                 String rtnStatus = tpsToa.getMaininfoMap().get("SUCC_CODE");
                 String chr_id = tpsToa.getMaininfoMap().get("CHR_ID");
@@ -96,12 +96,13 @@ public class T4011Processor extends AbstractTxnProcessor {
                 assembleAbnormalCbsResponse(TxnRtnCode.TXN_EXECUTE_FAILED, e.getMessage(), response);
                 logger.error("业务处理失败.", e);
             }
+*/
         }
 
     }
 
     //第三方通讯处理
-    private TpsToaXmlBean processTpsTx(CbsTia4011 tia, Stdp10ProcessorRequest request, Stdp10ProcessorResponse response) {
+    private TpsToaXmlBean processTpsTx(CbsTia4013 tia, Stdp10ProcessorRequest request, Stdp10ProcessorResponse response) {
         TpsTia tpsTia = assembleTpsRequestBean(tia, request);
         TpsToaXmlBean tpsToa = new TpsToaXmlBean();
 
@@ -144,10 +145,10 @@ public class T4011Processor extends AbstractTxnProcessor {
 
     //====
     //处理Starring请求报文
-    private CbsTia4011 getCbsTia(byte[] body) throws Exception {
-        CbsTia4011 tia = new CbsTia4011();
+    private CbsTia4013 getCbsTia(byte[] body) throws Exception {
+        CbsTia4013 tia = new CbsTia4013();
         SeperatedTextDataFormat starringDataFormat = new SeperatedTextDataFormat(tia.getClass().getPackage().getName());
-        tia = (CbsTia4011) starringDataFormat.fromMessage(new String(body, "GBK"), "CbsTia4011");
+        tia = (CbsTia4013) starringDataFormat.fromMessage(new String(body, "GBK"), "CbsTia4013");
         return tia;
     }
 
@@ -173,12 +174,19 @@ public class T4011Processor extends AbstractTxnProcessor {
     }
 
     //生成第三方请求报文对应BEAN
-    private TpsTia assembleTpsRequestBean(CbsTia4011 cbstia, Stdp10ProcessorRequest request) {
-        TpsTia2402 tpstia = new TpsTia2402();
-        TpsTia2402.BodyRecord record = ((TpsTia2402.Body) tpstia.getBody()).getObject().getRecord();
+    private TpsTia assembleTpsRequestBean(CbsTia4013 cbstia, Stdp10ProcessorRequest request) {
+        TpsTia2457 tpstia = new TpsTia2457();
+        TpsTia2457.BodyRecord record = ((TpsTia2457.Body) tpstia.getBody()).getObject().getRecord();
         FbiBeanUtils.copyProperties(cbstia, record, true);
 
-        generateTpsBizMsgHeader(tpstia, "2402", request);
+        List<TpsTia2457.BodyRecord.DetailRecord> detailRecords = new ArrayList<>();
+        for (CbsTia4013Item cbsTia4013Item : cbstia.getItems()) {
+            TpsTia2457.BodyRecord.DetailRecord   detailRecord = new TpsTia2457.BodyRecord.DetailRecord();
+            FbiBeanUtils.copyProperties(cbsTia4013Item, detailRecord, true);
+            detailRecords.add(detailRecord);
+        }
+        record.setObject(detailRecords);
+        generateTpsBizMsgHeader(tpstia, "2457", request);
         return tpstia;
     }
 

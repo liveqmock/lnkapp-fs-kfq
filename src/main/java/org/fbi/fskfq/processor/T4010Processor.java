@@ -255,7 +255,7 @@ public class T4010Processor extends AbstractTxnProcessor {
         SqlSessionFactory sqlSessionFactory = MybatisFactory.ORACLE.getInstance();
         try (SqlSession session = sqlSessionFactory.openSession()) {
             FsKfqPaymentItemExample example = new FsKfqPaymentItemExample();
-            example.createCriteria().andMainIdEqualTo(paymentInfo.getChrId());
+            example.createCriteria().andMainPkidEqualTo(paymentInfo.getChrId());
             FsKfqPaymentItemMapper infoMapper = session.getMapper(FsKfqPaymentItemMapper.class);
             return infoMapper.selectByExample(example);
         }
@@ -272,6 +272,7 @@ public class T4010Processor extends AbstractTxnProcessor {
             paymentInfo.setOperInitTlrid(request.getHeader("tellerId"));
             paymentInfo.setOperInitDate(new SimpleDateFormat("yyyyMMdd").format(new Date()));
             paymentInfo.setOperInitTime(new SimpleDateFormat("HHmmss").format(new Date()));
+            paymentInfo.setOperInitHostsn(request.getHeader("serialNo"));
 
             paymentInfo.setArchiveFlag("0");
 
@@ -283,6 +284,7 @@ public class T4010Processor extends AbstractTxnProcessor {
             paymentInfo.setAreaCode("KaiFaQu-FeiShui");
             paymentInfo.setHostAckFlag("0");
             paymentInfo.setLnkBillStatus("0"); //初始化
+            paymentInfo.setManualFlag("0"); //非手工票
 
             FsKfqPaymentInfoMapper infoMapper = session.getMapper(FsKfqPaymentInfoMapper.class);
             infoMapper.insert(paymentInfo);

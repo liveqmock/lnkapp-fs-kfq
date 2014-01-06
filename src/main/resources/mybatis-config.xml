@@ -21,6 +21,7 @@
         <mapper resource="org/fbi/fskfq/repository/mapper/common/CommonMapper.xml"/>
         <mapper resource="org/fbi/fskfq/repository/mapper/FsKfqPaymentInfoMapper.xml"/>
         <mapper resource="org/fbi/fskfq/repository/mapper/FsKfqPaymentItemMapper.xml"/>
+        <mapper resource="org/fbi/fskfq/repository/mapper/FsKfqSysCtlMapper.xml"/>
     </mappers>
 
 </configuration>

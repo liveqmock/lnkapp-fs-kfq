@@ -107,7 +107,7 @@ public class T4070Processor extends AbstractTxnProcessor {
             mapper = session.getMapper(FsKfqPaymentItemMapper.class);
             FsKfqPaymentItemExample example = new FsKfqPaymentItemExample();
             example.createCriteria()
-                    .andMainIdEqualTo(paymentInfo.getChrId());
+                    .andMainPkidEqualTo(paymentInfo.getChrId());
             return mapper.selectByExample(example);
         }
     }
