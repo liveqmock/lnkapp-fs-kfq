@@ -79,7 +79,7 @@ public abstract class AbstractTxnProcessor extends Stdp10Processor {
     //组统一的错误响应报文 txtMsg
     private String getErrorRespMsgForStarring(String errMsg) {
         TOA9999 toa = new TOA9999();
-        toa.setErrMsg("交易失败-" + errMsg);
+        toa.setErrMsg(errMsg);
         String starringRespMsg;
         Map<String, Object> modelObjectsMap = new HashMap<String, Object>();
         modelObjectsMap.put(toa.getClass().getName(), toa);

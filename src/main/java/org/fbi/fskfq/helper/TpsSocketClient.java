@@ -49,6 +49,9 @@ public class TpsSocketClient {
             int msgLen = Integer.parseInt(new String(recvbuf).trim());
             recvbuf = new byte[msgLen - 8];
 
+            //TODO
+            Thread.sleep(500);
+
             readNum = is.read(recvbuf);   //阻塞读
             if (readNum != msgLen - 8) {
                 throw new RuntimeException("报文长度错误,报文头指示长度:[" + msgLen + "], 实际获取长度:[" + readNum +"]");
