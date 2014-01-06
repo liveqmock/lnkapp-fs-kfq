@@ -255,7 +255,7 @@ public class T4010Processor extends AbstractTxnProcessor {
         SqlSessionFactory sqlSessionFactory = MybatisFactory.ORACLE.getInstance();
         try (SqlSession session = sqlSessionFactory.openSession()) {
             FsKfqPaymentItemExample example = new FsKfqPaymentItemExample();
-            example.createCriteria().andChrIdEqualTo(paymentInfo.getChrId());
+            example.createCriteria().andMainIdEqualTo(paymentInfo.getChrId());
             FsKfqPaymentItemMapper infoMapper = session.getMapper(FsKfqPaymentItemMapper.class);
             return infoMapper.selectByExample(example);
         }

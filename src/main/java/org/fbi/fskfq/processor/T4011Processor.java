@@ -188,7 +188,11 @@ public class T4011Processor extends AbstractTxnProcessor {
         SqlSessionFactory sqlSessionFactory = MybatisFactory.ORACLE.getInstance();
         SqlSession session = sqlSessionFactory.openSession();
         try {
-            paymentInfo.setBankIndate(request.getHeader("txnTime").substring(0, 8));
+            //setBankIndate 由特色系统请求报文中提供
+            //Date date = new SimpleDateFormat("yyyyMMddHHmmss").parse(request.getHeader("txnTime"));
+            //paymentInfo.setBankIndate(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(date));
+            //paymentInfo.setBankIndate(new SimpleDateFormat("yyyy-MM-dd").format(date));
+
             paymentInfo.setBusinessId(request.getHeader("serialNo"));
             paymentInfo.setOperPayBankid(request.getHeader("branchId"));
             paymentInfo.setOperPayTellerid(request.getHeader("tellerId"));
