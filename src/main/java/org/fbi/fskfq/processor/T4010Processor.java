@@ -266,6 +266,7 @@ public class T4010Processor extends AbstractTxnProcessor {
         SqlSessionFactory sqlSessionFactory = MybatisFactory.ORACLE.getInstance();
         SqlSession session = sqlSessionFactory.openSession();
         try {
+            paymentInfo.setPkid(UUID.randomUUID().toString());
             paymentInfo.setBankIndate(request.getHeader("txnTime").substring(0, 8));
             paymentInfo.setBusinessId(request.getHeader("serialNo"));
             paymentInfo.setOperInitBankid(request.getHeader("branchId"));
@@ -293,6 +294,7 @@ public class T4010Processor extends AbstractTxnProcessor {
             int i = 0;
             for (FsKfqPaymentItem item : paymentItems) {
                 i++;
+                item.setMainPkid(paymentInfo.getPkid());
                 itemMapper.insert(item);
             }
             session.commit();

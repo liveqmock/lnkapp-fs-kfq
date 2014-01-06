@@ -65,6 +65,9 @@ public class T4011Processor extends AbstractTxnProcessor {
 
         //第三方处理
         TpsToaXmlBean tpsToa = processTpsTx(tia, request, response);
+        if (tpsToa == null) { //出现异常
+            return;
+        }
         //判断正误
         String result = tpsToa.getMaininfoMap().get("RESULT");
         if (result != null) { //异常业务报文
@@ -134,9 +137,11 @@ public class T4011Processor extends AbstractTxnProcessor {
         } catch (SocketTimeoutException e) {
             logger.error("与第三方服务器通讯处理超时.", e);
             response.setHeader("rtnCode", TxnRtnCode.MSG_RECV_TIMEOUT.getCode());
+            return null;
         } catch (Exception e) {
             logger.error("与第三方服务器通讯处理异常.", e);
             response.setHeader("rtnCode", TxnRtnCode.MSG_COMM_ERROR.getCode());
+            return null;
         }
 
         return tpsToa;
