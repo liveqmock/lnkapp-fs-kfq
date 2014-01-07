@@ -197,6 +197,11 @@ public class T4011Processor extends AbstractTxnProcessor {
             paymentInfo.setBankIndate(cbsTia.getBankIndate());
             paymentInfo.setIncomestatus(cbsTia.getIncomestatus());
             paymentInfo.setBusinessId(cbsTia.getBusinessId());
+            paymentInfo.setBillMoney(cbsTia.getBillMoney());
+            paymentInfo.setPmCode(cbsTia.getPmCode());
+            paymentInfo.setChequeNo(cbsTia.getChequeNo());
+            paymentInfo.setSetYear(cbsTia.getSetYear());
+            paymentInfo.setBilltypeCode(cbsTia.getBilltypeCode());
 
             //paymentInfo.setBusinessId(request.getHeader("serialNo"));
             paymentInfo.setOperPayBankid(request.getHeader("branchId"));

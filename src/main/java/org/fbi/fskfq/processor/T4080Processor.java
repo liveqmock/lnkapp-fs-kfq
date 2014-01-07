@@ -22,6 +22,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -46,16 +47,34 @@ public class T4080Processor extends AbstractTxnProcessor {
 
         //获取本地数据库信息
         CbsToa4080 cbsToa4080 = new CbsToa4080();
-        List<CbsToa4080Item> cbsToa4080Items = new ArrayList<>();
         String startDate = tia.getStartDate().substring(0, 4) + "-" + tia.getStartDate().substring(4, 6) + "-" + tia.getStartDate().substring(6, 8);
         String endDate = tia.getEndDate().substring(0, 4) + "-" + tia.getEndDate().substring(4, 6) + "-" + tia.getEndDate().substring(6, 8);
         List<FsKfqPaymentInfo> infos = selectPayoffPaymentInfos(startDate, endDate);
+
+        BigDecimal totalAmt = new BigDecimal("0.00");
+        for (FsKfqPaymentInfo info : infos) {
+            BigDecimal billMoney = info.getBillMoney();
+            if (billMoney != null) {
+                totalAmt = totalAmt.add(billMoney);
+            } else {
+                processBillMoney(info);
+            }
+        }
+
         int count = 0;
+        List<CbsToa4080Item> cbsToa4080Items = new ArrayList<>();
+
+        //合计
+        CbsToa4080Item cbsToa4080Item = new CbsToa4080Item();
+        cbsToa4080Item.setIenCode("(合计)");
+        cbsToa4080Item.setChargemoney(totalAmt);
+        cbsToa4080Items.add(cbsToa4080Item);
+
         for (FsKfqPaymentInfo info : infos) {
             List<FsKfqPaymentItem> items = selectPayoffPaymentItems(info);
             for (FsKfqPaymentItem item : items) {
                 count++;
-                CbsToa4080Item cbsToa4080Item = new CbsToa4080Item();
+                cbsToa4080Item = new CbsToa4080Item();
                 cbsToa4080Item.setSn("" + count);
                 cbsToa4080Item.setIenCode(info.getIenCode());
                 cbsToa4080Item.setIenName(info.getIenName());
@@ -130,4 +149,30 @@ public class T4080Processor extends AbstractTxnProcessor {
         return starringRespMsg;
     }
 
+    //==============
+    //TEMP
+    private void processBillMoney(FsKfqPaymentInfo info) {
+        BigDecimal infoAmt = info.getBillMoney();
+        List<FsKfqPaymentItem> items = selectPayoffPaymentItems(info);
+        BigDecimal totalItemsAmt = new BigDecimal("0.00");
+        for (FsKfqPaymentItem item : items) {
+            totalItemsAmt = totalItemsAmt.add(item.getChargemoney());
+        }
+        if (infoAmt == null) {
+            SqlSessionFactory sqlSessionFactory = MybatisFactory.ORACLE.getInstance();
+            SqlSession session = sqlSessionFactory.openSession();
+            try {
+                FsKfqPaymentInfoMapper infoMapper = session.getMapper(FsKfqPaymentInfoMapper.class);
+                FsKfqPaymentInfo record = infoMapper.selectByPrimaryKey(info.getPkid());
+                record.setBillMoney(totalItemsAmt);
+                infoMapper.updateByPrimaryKey(record);
+                session.commit();
+            } catch (Exception e) {
+                session.rollback();
+                throw new RuntimeException("金额临时汇总处理失败。", e);
+            } finally {
+                session.close();
+            }
+        }
+    }
 }
