@@ -26,9 +26,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.SocketTimeoutException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 
 /**
  * Created by zhanrui on 13-12-31.
@@ -38,9 +36,9 @@ public class T4013Processor extends AbstractTxnProcessor {
     private Logger logger = LoggerFactory.getLogger(this.getClass());
 
     public void doRequest(Stdp10ProcessorRequest request, Stdp10ProcessorResponse response) throws ProcessorException, IOException {
-        CbsTia4013 tia;
+        CbsTia4013 cbsTia;
         try {
-            tia = getCbsTia(request.getRequestBody());
+            cbsTia = getCbsTia(request.getRequestBody());
         } catch (Exception e) {
             logger.error("特色业务平台请求报文解析错误.", e);
             response.setHeader("rtnCode", TxnRtnCode.CBSMSG_UNMARSHAL_FAILED.getCode());
@@ -48,7 +46,7 @@ public class T4013Processor extends AbstractTxnProcessor {
         }
 
         //检查本地数据库信息
-        FsKfqPaymentInfo paymentInfo = selectNotCanceledPaymentInfoFromDB(tia.getBillNo());
+        FsKfqPaymentInfo paymentInfo = selectNotCanceledPaymentInfoFromDB(cbsTia.getBillNo());
         if (paymentInfo != null) {
             String billStatus = paymentInfo.getLnkBillStatus();
             if (billStatus.equals(BillStatus.PAYOFF.getCode())) { //已缴款
@@ -63,7 +61,7 @@ public class T4013Processor extends AbstractTxnProcessor {
         }
 
         //第三方处理
-        TpsToaXmlBean tpsToa = processTpsTx(tia, request, response);
+        TpsToaXmlBean tpsToa = processTpsTx(cbsTia, request, response);
         if (tpsToa == null) { //出现异常
             return;
         }
@@ -73,33 +71,29 @@ public class T4013Processor extends AbstractTxnProcessor {
             TpsToa9000 tpsToa9000 = new TpsToa9000();
             try {
                 FbiBeanUtils.copyProperties(tpsToa.getMaininfoMap(), tpsToa9000, true);
-                assembleAbnormalCbsResponse(TxnRtnCode.TXN_EXECUTE_FAILED, tpsToa9000.getAddWord(), response);
+                marshalAbnormalCbsResponse(TxnRtnCode.TXN_EXECUTE_FAILED, tpsToa9000.getAddWord(), response);
             } catch (Exception e) {
                 logger.error("第三方服务器响应报文解析异常.", e);
                 response.setHeader("rtnCode", TxnRtnCode.TXN_EXECUTE_FAILED.getCode());
             }
         } else { //正常交易逻辑处理
-/*
             try {
                 String rtnStatus = tpsToa.getMaininfoMap().get("SUCC_CODE");
-                String chr_id = tpsToa.getMaininfoMap().get("CHR_ID");
                 String bill_no = tpsToa.getMaininfoMap().get("BILL_NO");
-                if (!paymentInfo.getChrId().equals(chr_id) || !paymentInfo.getBillNo().equals(bill_no)) {
-                    assembleAbnormalCbsResponse(TxnRtnCode.TXN_EXECUTE_FAILED, "单号不符！", response);
+                if (!cbsTia.getBillNo().equals(bill_no)) {
+                    marshalAbnormalCbsResponse(TxnRtnCode.TXN_EXECUTE_FAILED, "单号不符！", response);
                 } else {
                     if (!"OK".equals(rtnStatus)) {
-                        assembleAbnormalCbsResponse(TxnRtnCode.TXN_EXECUTE_FAILED, rtnStatus, response);
+                        marshalAbnormalCbsResponse(TxnRtnCode.TXN_EXECUTE_FAILED, rtnStatus, response);
                     } else {
-                        processTxn(paymentInfo, request);
-                        response.setHeader("rtnCode", TxnRtnCode.TXN_EXECUTE_SECCESS.getCode());
-                        //response.setResponseBody(starringRespMsg.getBytes(response.getCharacterEncoding()));
+                        processTxn(cbsTia, request, tpsToa);
+                        marshalSuccessTxnCbsResponse(response);
                     }
                 }
             } catch (Exception e) {
-                assembleAbnormalCbsResponse(TxnRtnCode.TXN_EXECUTE_FAILED, e.getMessage(), response);
+                marshalAbnormalCbsResponse(TxnRtnCode.TXN_EXECUTE_FAILED, e.getMessage(), response);
                 logger.error("业务处理失败.", e);
             }
-*/
         }
 
     }
@@ -131,7 +125,8 @@ public class T4013Processor extends AbstractTxnProcessor {
                 t9905Processor.doRequest(request, response);
 
                 logger.info("===第三方服务器返回报文(异常业务信息类)：\n" + tpsToa9910.toString());
-                assembleAbnormalCbsResponse(TxnRtnCode.TXN_EXECUTE_FAILED, tpsToa9910.Body.Object.Record.add_word, response);
+                marshalAbnormalCbsResponse(TxnRtnCode.TXN_EXECUTE_FAILED, tpsToa9910.Body.Object.Record.add_word, response);
+                return null;
             } else { //业务类正常或异常报文 1402
                 tpsToa = transXmlToBeanForTps(recvTpsBuf);
             }
@@ -197,16 +192,29 @@ public class T4013Processor extends AbstractTxnProcessor {
 
 
     //=============
-    private void processTxn(FsKfqPaymentInfo paymentInfo, Stdp10ProcessorRequest request) {
+    private void processTxn(CbsTia4013 cbsTia, Stdp10ProcessorRequest request, TpsToaXmlBean tpsToa) {
+        FsKfqPaymentInfo paymentInfo = new FsKfqPaymentInfo();
+        FbiBeanUtils.copyProperties(cbsTia, paymentInfo);
+
+        Map<String,String> toaMap = tpsToa.getMaininfoMap();
+        paymentInfo.setChrId(toaMap.get("CHR_ID"));
+        paymentInfo.setBilltypeCode(toaMap.get("BILLTYPE_CODE"));
+        paymentInfo.setBilltypeName(toaMap.get("BILLTYPE_NAME"));
+        paymentInfo.setVerifyNo(toaMap.get("VERIFY_NO"));
+        paymentInfo.setMakedate(toaMap.get("MAKEDATE"));
+        paymentInfo.setIenCode(toaMap.get("IEN_CODE"));
+        paymentInfo.setIenName(toaMap.get("IEN_NAME"));
+        paymentInfo.setSetYear(toaMap.get("SET_YEAR"));
+
         SqlSessionFactory sqlSessionFactory = MybatisFactory.ORACLE.getInstance();
         SqlSession session = sqlSessionFactory.openSession();
         try {
-            //setBankIndate 由特色系统请求报文中提供
-            //Date date = new SimpleDateFormat("yyyyMMddHHmmss").parse(request.getHeader("txnTime"));
-            //paymentInfo.setBankIndate(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(date));
-            //paymentInfo.setBankIndate(new SimpleDateFormat("yyyy-MM-dd").format(date));
+            //TODO BankIndate、incomingstatus、pm_code 特色业务系统应提供字段内容
+            Date date = new SimpleDateFormat("yyyyMMddHHmmss").parse(request.getHeader("txnTime"));
+            paymentInfo.setBankIndate(new SimpleDateFormat("yyyy-MM-dd").format(date));
 
             paymentInfo.setBusinessId(request.getHeader("serialNo"));
+
             paymentInfo.setOperPayBankid(request.getHeader("branchId"));
             paymentInfo.setOperPayTlrid(request.getHeader("tellerId"));
             paymentInfo.setOperPayDate(new SimpleDateFormat("yyyyMMdd").format(new Date()));
@@ -218,11 +226,15 @@ public class T4013Processor extends AbstractTxnProcessor {
             paymentInfo.setFbBookFlag("1");
             paymentInfo.setFbChkFlag("0");
 
-            //paymentInfo.setAreaCode("KaiFaQu-FeiShui");
+            paymentInfo.setAreaCode("KaiFaQu-FeiShui");
             paymentInfo.setHostAckFlag("0");
             paymentInfo.setLnkBillStatus(BillStatus.PAYOFF.getCode()); //已缴款
+            paymentInfo.setManualFlag("1"); //手工票
+
+            paymentInfo.setPkid(UUID.randomUUID().toString());
+
             FsKfqPaymentInfoMapper infoMapper = session.getMapper(FsKfqPaymentInfoMapper.class);
-            infoMapper.updateByPrimaryKey(paymentInfo);
+            infoMapper.insert(paymentInfo);
             session.commit();
         } catch (Exception e) {
             session.rollback();

@@ -2,9 +2,9 @@ package org.fbi.fskfq.processor;
 
 import org.apache.ibatis.session.SqlSession;
 import org.apache.ibatis.session.SqlSessionFactory;
-import org.fbi.fskfq.domain.cbs.T4070Request.CbsTia4070;
-import org.fbi.fskfq.domain.cbs.T4070Response.CbsToa4070;
-import org.fbi.fskfq.domain.cbs.T4070Response.CbsToa4070Item;
+import org.fbi.fskfq.domain.cbs.T4080Request.CbsTia4080;
+import org.fbi.fskfq.domain.cbs.T4080Response.CbsToa4080;
+import org.fbi.fskfq.domain.cbs.T4080Response.CbsToa4080Item;
 import org.fbi.fskfq.enums.BillStatus;
 import org.fbi.fskfq.enums.TxnRtnCode;
 import org.fbi.fskfq.helper.MybatisFactory;
@@ -31,11 +31,11 @@ import java.util.Map;
  * Created by zhanrui on 13-12-31.
  * 日报交易
  */
-public class T4070Processor extends AbstractTxnProcessor {
+public class T4080Processor extends AbstractTxnProcessor {
     private Logger logger = LoggerFactory.getLogger(this.getClass());
 
     public void doRequest(Stdp10ProcessorRequest request, Stdp10ProcessorResponse response) throws ProcessorException, IOException {
-        CbsTia4070 tia;
+        CbsTia4080 tia;
         try {
             tia = getCbsTia(request.getRequestBody());
         } catch (Exception e) {
@@ -45,30 +45,33 @@ public class T4070Processor extends AbstractTxnProcessor {
         }
 
         //获取本地数据库信息
-        CbsToa4070 cbsToa4070 = new CbsToa4070();
-        List<CbsToa4070Item> cbsToa4070Items = new ArrayList<>();
-        String startDate = tia.getStartDate().substring(0,4) + "-" +  tia.getStartDate().substring(4,6) +  "-" + tia.getStartDate().substring(6,8);
-        String endDate = tia.getEndDate().substring(0,4) +  "-" + tia.getEndDate().substring(4,6) +  "-" + tia.getEndDate().substring(6,8);
+        CbsToa4080 cbsToa4080 = new CbsToa4080();
+        List<CbsToa4080Item> cbsToa4080Items = new ArrayList<>();
+        String startDate = tia.getStartDate().substring(0, 4) + "-" + tia.getStartDate().substring(4, 6) + "-" + tia.getStartDate().substring(6, 8);
+        String endDate = tia.getEndDate().substring(0, 4) + "-" + tia.getEndDate().substring(4, 6) + "-" + tia.getEndDate().substring(6, 8);
         List<FsKfqPaymentInfo> infos = selectPayoffPaymentInfos(startDate, endDate);
+        int count = 0;
         for (FsKfqPaymentInfo info : infos) {
             List<FsKfqPaymentItem> items = selectPayoffPaymentItems(info);
             for (FsKfqPaymentItem item : items) {
-                CbsToa4070Item cbsToa4070Item = new CbsToa4070Item();
-                cbsToa4070Item.setIenCode(info.getIenCode());
-                cbsToa4070Item.setIenName(info.getIenName());
-                cbsToa4070Item.setBillNo(info.getBillNo());
-                cbsToa4070Item.setInBisCode(item.getInBisCode());
-                cbsToa4070Item.setInBisName(item.getInBisName());
-                cbsToa4070Item.setChargemoney(item.getChargemoney());
-                cbsToa4070Items.add(cbsToa4070Item);
+                count++;
+                CbsToa4080Item cbsToa4080Item = new CbsToa4080Item();
+                cbsToa4080Item.setSn("" + count);
+                cbsToa4080Item.setIenCode(info.getIenCode());
+                cbsToa4080Item.setIenName(info.getIenName());
+                cbsToa4080Item.setBillNo(info.getBillNo());
+                cbsToa4080Item.setInBisCode(item.getInBisCode());
+                cbsToa4080Item.setInBisName(item.getInBisName());
+                cbsToa4080Item.setChargemoney(item.getChargemoney());
+                cbsToa4080Items.add(cbsToa4080Item);
             }
         }
-        cbsToa4070.setItemNum(""+ cbsToa4070Items.size());
-        cbsToa4070.setItems(cbsToa4070Items);
+        cbsToa4080.setItemNum("" + cbsToa4080Items.size());
+        cbsToa4080.setItems(cbsToa4080Items);
 
         //==特色平台响应==
         try {
-            String respMsg = getRespMsgForStarring(cbsToa4070);
+            String respMsg = getRespMsgForStarring(cbsToa4080);
             response.setHeader("rtnCode", TxnRtnCode.TXN_EXECUTE_SECCESS.getCode());
             response.setResponseBody(respMsg.getBytes(response.getCharacterEncoding()));
         } catch (Exception e) {
@@ -80,15 +83,15 @@ public class T4070Processor extends AbstractTxnProcessor {
 
     //====
     //处理Starring请求报文
-    private CbsTia4070 getCbsTia(byte[] body) throws Exception {
-        CbsTia4070 tia = new CbsTia4070();
+    private CbsTia4080 getCbsTia(byte[] body) throws Exception {
+        CbsTia4080 tia = new CbsTia4080();
         SeperatedTextDataFormat starringDataFormat = new SeperatedTextDataFormat(tia.getClass().getPackage().getName());
-        tia = (CbsTia4070) starringDataFormat.fromMessage(new String(body, "GBK"), "CbsTia4070");
+        tia = (CbsTia4080) starringDataFormat.fromMessage(new String(body, "GBK"), "CbsTia4080");
         return tia;
     }
 
     //查找已缴款未撤销的缴款单记录
-    private List<FsKfqPaymentInfo>  selectPayoffPaymentInfos(String startDate, String endDate) {
+    private List<FsKfqPaymentInfo> selectPayoffPaymentInfos(String startDate, String endDate) {
         SqlSessionFactory sqlSessionFactory = MybatisFactory.ORACLE.getInstance();
         FsKfqPaymentInfoMapper mapper;
         try (SqlSession session = sqlSessionFactory.openSession()) {
@@ -97,9 +100,10 @@ public class T4070Processor extends AbstractTxnProcessor {
             example.createCriteria()
                     .andBankIndateBetween(startDate, endDate)
                     .andLnkBillStatusEqualTo(BillStatus.PAYOFF.getCode());
-             return  mapper.selectByExample(example);
+            return mapper.selectByExample(example);
         }
     }
+
     private List<FsKfqPaymentItem> selectPayoffPaymentItems(FsKfqPaymentInfo paymentInfo) {
         SqlSessionFactory sqlSessionFactory = MybatisFactory.ORACLE.getInstance();
         FsKfqPaymentItemMapper mapper;
@@ -107,13 +111,13 @@ public class T4070Processor extends AbstractTxnProcessor {
             mapper = session.getMapper(FsKfqPaymentItemMapper.class);
             FsKfqPaymentItemExample example = new FsKfqPaymentItemExample();
             example.createCriteria()
-                    .andMainPkidEqualTo(paymentInfo.getChrId());
+                    .andMainPkidEqualTo(paymentInfo.getPkid());
             return mapper.selectByExample(example);
         }
     }
 
     //生成CBS响应报文
-    private String getRespMsgForStarring(CbsToa4070 cbsToa) {
+    private String getRespMsgForStarring(CbsToa4080 cbsToa) {
         String starringRespMsg = "";
         Map<String, Object> modelObjectsMap = new HashMap<String, Object>();
         modelObjectsMap.put(cbsToa.getClass().getName(), cbsToa);

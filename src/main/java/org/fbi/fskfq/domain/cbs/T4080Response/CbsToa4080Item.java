@@ -1,4 +1,4 @@
-package org.fbi.fskfq.domain.cbs.T4070Response;
+package org.fbi.fskfq.domain.cbs.T4080Response;
 
 
 import org.fbi.linking.codec.dataformat.annotation.DataField;
@@ -11,7 +11,7 @@ import java.math.BigDecimal;
  * Date: 13-12-30
  */
 @OneToManySeperatedTextMessage(separator = ",")
-public class CbsToa4070Item {
+public class CbsToa4080Item {
     @DataField(seq = 1)
     private String sn;
 
@@ -91,7 +91,7 @@ public class CbsToa4070Item {
 
     @Override
     public String toString() {
-        return "CbsToa4070Item{" +
+        return "CbsToa4080Item{" +
                 "sn='" + sn + '\'' +
                 ", ienCode='" + ienCode + '\'' +
                 ", ienName='" + ienName + '\'' +

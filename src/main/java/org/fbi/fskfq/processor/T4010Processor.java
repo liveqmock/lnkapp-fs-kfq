@@ -96,7 +96,7 @@ public class T4010Processor extends AbstractTxnProcessor {
                 //TODO 发起签到交易
                 T9905Processor t9905Processor = new T9905Processor();
                 t9905Processor.doRequest(request, response);
-                assembleAbnormalCbsResponse(TxnRtnCode.TXN_EXECUTE_FAILED, "授权码变动,请重新发起交易.", response);
+                marshalAbnormalCbsResponse(TxnRtnCode.TXN_EXECUTE_FAILED, "授权码变动,请重新发起交易.", response);
                 //assembleAbnormalCbsResponse(TxnRtnCode.TXN_EXECUTE_FAILED, tpsToa9910.Body.Object.Record.add_word, response);
                 logger.info("===第三方服务器返回报文(异常业务信息类)：\n" + tpsToa9910.toString());
                 return;
@@ -121,7 +121,7 @@ public class T4010Processor extends AbstractTxnProcessor {
             TpsToa9000 tpsToa9000 = new TpsToa9000();
             try {
                 FbiBeanUtils.copyProperties(tpsToa.getMaininfoMap(), tpsToa9000, true);
-                assembleAbnormalCbsResponse(TxnRtnCode.TXN_EXECUTE_FAILED, tpsToa9000.getAddWord(), response);
+                marshalAbnormalCbsResponse(TxnRtnCode.TXN_EXECUTE_FAILED, tpsToa9000.getAddWord(), response);
                 return;
             } catch (Exception e) {
                 logger.error("第三方服务器响应报文解析异常.", e);
@@ -148,7 +148,7 @@ public class T4010Processor extends AbstractTxnProcessor {
 
         //正常交易逻辑处理前检查返回报文中的单号是否与请求报文中一致
         if (!tia.getBillNo().equals(paymentInfo.getBillNo())) {
-            assembleAbnormalCbsResponse(TxnRtnCode.TXN_EXECUTE_FAILED, "请求单号与第三方响应单号不符.", response);
+            marshalAbnormalCbsResponse(TxnRtnCode.TXN_EXECUTE_FAILED, "请求单号与第三方响应单号不符.", response);
             logger.info("===特色平台响应报文(异常业务信息类)：\n" + new String(response.getResponseBody(), response.getCharacterEncoding()));
             return;
         }
@@ -157,7 +157,7 @@ public class T4010Processor extends AbstractTxnProcessor {
         try {
             processTxn(paymentInfo, paymentItems, request);
         } catch (Exception e) {
-            assembleAbnormalCbsResponse(TxnRtnCode.TXN_EXECUTE_FAILED, e.getMessage(), response);
+            marshalAbnormalCbsResponse(TxnRtnCode.TXN_EXECUTE_FAILED, e.getMessage(), response);
             logger.error("业务处理失败.", e);
         }
 
@@ -255,7 +255,7 @@ public class T4010Processor extends AbstractTxnProcessor {
         SqlSessionFactory sqlSessionFactory = MybatisFactory.ORACLE.getInstance();
         try (SqlSession session = sqlSessionFactory.openSession()) {
             FsKfqPaymentItemExample example = new FsKfqPaymentItemExample();
-            example.createCriteria().andMainPkidEqualTo(paymentInfo.getChrId());
+            example.createCriteria().andMainPkidEqualTo(paymentInfo.getPkid());
             FsKfqPaymentItemMapper infoMapper = session.getMapper(FsKfqPaymentItemMapper.class);
             return infoMapper.selectByExample(example);
         }
@@ -267,8 +267,8 @@ public class T4010Processor extends AbstractTxnProcessor {
         SqlSession session = sqlSessionFactory.openSession();
         try {
             paymentInfo.setPkid(UUID.randomUUID().toString());
-            paymentInfo.setBankIndate(request.getHeader("txnTime").substring(0, 8));
-            paymentInfo.setBusinessId(request.getHeader("serialNo"));
+            //paymentInfo.setBankIndate(request.getHeader("txnTime").substring(0, 8));
+            //paymentInfo.setBusinessId(request.getHeader("serialNo"));
             paymentInfo.setOperInitBankid(request.getHeader("branchId"));
             paymentInfo.setOperInitTlrid(request.getHeader("tellerId"));
             paymentInfo.setOperInitDate(new SimpleDateFormat("yyyyMMdd").format(new Date()));

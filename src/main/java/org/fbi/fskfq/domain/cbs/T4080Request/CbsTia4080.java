@@ -1,4 +1,4 @@
-package org.fbi.fskfq.domain.cbs.T4070Request;
+package org.fbi.fskfq.domain.cbs.T4080Request;
 
 
 import org.fbi.linking.codec.dataformat.annotation.DataField;
@@ -9,7 +9,7 @@ import org.fbi.linking.codec.dataformat.annotation.SeperatedTextMessage;
  * Date: 13-12-25
  */
 @SeperatedTextMessage(separator = "\\|", mainClass = true)
-public class CbsTia4070 {
+public class CbsTia4080 {
     @DataField(seq = 1)
     private String rptType;
 

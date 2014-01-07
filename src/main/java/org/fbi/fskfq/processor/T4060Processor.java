@@ -71,7 +71,7 @@ public class T4060Processor extends AbstractTxnProcessor {
             response.setHeader("rtnCode", TxnRtnCode.TXN_EXECUTE_FAILED.getCode());
             response.setResponseBody("对账失败,总金额不符.".getBytes(response.getCharacterEncoding()));
         } else {
-            response.setHeader("rtnCode", TxnRtnCode.TXN_EXECUTE_SECCESS.getCode());
+            marshalSuccessTxnCbsResponse(response);
         }
     }
 
@@ -107,7 +107,7 @@ public class T4060Processor extends AbstractTxnProcessor {
             mapper = session.getMapper(FsKfqPaymentItemMapper.class);
             FsKfqPaymentItemExample example = new FsKfqPaymentItemExample();
             example.createCriteria()
-                    .andMainPkidEqualTo(paymentInfo.getChrId());
+                    .andMainPkidEqualTo(paymentInfo.getPkid());
             return mapper.selectByExample(example);
         }
     }

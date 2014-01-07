@@ -65,8 +65,18 @@ public abstract class AbstractTxnProcessor extends Stdp10Processor {
 
     abstract protected void doRequest(Stdp10ProcessorRequest request, Stdp10ProcessorResponse response) throws ProcessorException, IOException;
 
-    //cbs异常报文处理
-    protected void assembleAbnormalCbsResponse(TxnRtnCode txnRtnCode, String errMsg, Stdp10ProcessorResponse response) {
+    //打包cbs交易成功报文
+    protected void marshalSuccessTxnCbsResponse(Stdp10ProcessorResponse response) {
+        String msg = "交易成功";
+        try {
+            response.setHeader("rtnCode", TxnRtnCode.TXN_EXECUTE_SECCESS.getCode());
+            response.setResponseBody(msg.getBytes(response.getCharacterEncoding()));
+        } catch (UnsupportedEncodingException e) {
+            throw new RuntimeException("编码错误", e);
+        }
+    }
+    //打包cbs异常报文
+    protected void marshalAbnormalCbsResponse(TxnRtnCode txnRtnCode, String errMsg, Stdp10ProcessorResponse response) {
         String msg = getErrorRespMsgForStarring(errMsg);
         response.setHeader("rtnCode", txnRtnCode.getCode());
         try {

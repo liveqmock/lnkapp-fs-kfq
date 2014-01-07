@@ -48,7 +48,7 @@ public class T4040Processor extends AbstractTxnProcessor {
         //检查本地数据库信息
         FsKfqPaymentInfo paymentInfo = selectPayoffPaymentInfoFromDB(tia.getBillNo());
         if (paymentInfo == null) {
-            assembleAbnormalCbsResponse(TxnRtnCode.TXN_EXECUTE_FAILED, "不存在已缴款的记录.", response);
+            marshalAbnormalCbsResponse(TxnRtnCode.TXN_EXECUTE_FAILED, "不存在已缴款的记录.", response);
             return;
         }
 
@@ -63,7 +63,7 @@ public class T4040Processor extends AbstractTxnProcessor {
             TpsToa9000 tpsToa9000 = new TpsToa9000();
             try {
                 FbiBeanUtils.copyProperties(tpsToa.getMaininfoMap(), tpsToa9000, true);
-                assembleAbnormalCbsResponse(TxnRtnCode.TXN_EXECUTE_FAILED, tpsToa9000.getAddWord(), response);
+                marshalAbnormalCbsResponse(TxnRtnCode.TXN_EXECUTE_FAILED, tpsToa9000.getAddWord(), response);
             } catch (Exception e) {
                 logger.error("第三方服务器响应报文解析异常.", e);
                 response.setHeader("rtnCode", TxnRtnCode.TXN_EXECUTE_FAILED.getCode());
@@ -74,18 +74,17 @@ public class T4040Processor extends AbstractTxnProcessor {
                 String chr_id = tpsToa.getMaininfoMap().get("CHR_ID");
                 String bill_no = tpsToa.getMaininfoMap().get("BILL_NO");
                 if (!paymentInfo.getChrId().equals(chr_id) || !paymentInfo.getBillNo().equals(bill_no)) {
-                    assembleAbnormalCbsResponse(TxnRtnCode.TXN_EXECUTE_FAILED, "单号不符！", response);
+                    marshalAbnormalCbsResponse(TxnRtnCode.TXN_EXECUTE_FAILED, "单号不符！", response);
                 } else {
                     if (!"OK".equals(rtnStatus)) {
-                        assembleAbnormalCbsResponse(TxnRtnCode.TXN_EXECUTE_FAILED, rtnStatus, response);
+                        marshalAbnormalCbsResponse(TxnRtnCode.TXN_EXECUTE_FAILED, rtnStatus, response);
                     } else {
                         processTxn(paymentInfo, request);
-                        response.setHeader("rtnCode", TxnRtnCode.TXN_EXECUTE_SECCESS.getCode());
-                        //response.setResponseBody(starringRespMsg.getBytes(response.getCharacterEncoding()));
+                        marshalSuccessTxnCbsResponse(response);
                     }
                 }
             } catch (Exception e) {
-                assembleAbnormalCbsResponse(TxnRtnCode.TXN_EXECUTE_FAILED, e.getMessage(), response);
+                marshalAbnormalCbsResponse(TxnRtnCode.TXN_EXECUTE_FAILED, e.getMessage(), response);
                 logger.error("业务处理失败.", e);
             }
         }
@@ -119,7 +118,8 @@ public class T4040Processor extends AbstractTxnProcessor {
                 t9905Processor.doRequest(request, response);
 
                 logger.info("===第三方服务器返回报文(异常业务信息类)：\n" + tpsToa9910.toString());
-                assembleAbnormalCbsResponse(TxnRtnCode.TXN_EXECUTE_FAILED, tpsToa9910.Body.Object.Record.add_word, response);
+                marshalAbnormalCbsResponse(TxnRtnCode.TXN_EXECUTE_FAILED, tpsToa9910.Body.Object.Record.add_word, response);
+                return null;
             } else { //业务类正常或异常报文 1402
                 tpsToa = transXmlToBeanForTps(recvTpsBuf);
             }
