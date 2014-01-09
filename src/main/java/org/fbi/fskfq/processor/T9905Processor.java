@@ -47,9 +47,6 @@ public class T9905Processor extends AbstractTxnProcessor {
                 //保存授权码信息
                 ProcessorContext context = request.getProcessorContext();
                 context.setAttribute(CONTEXT_TPS_AUTHCODE, tpsToa9906.Body.Object.Record.accredit_code);
-
-                //TODO
-                tps_authcode = tpsToa9906.Body.Object.Record.accredit_code;
             } else {
                 //TODO
                 logger.error("签到交易返回异常.");

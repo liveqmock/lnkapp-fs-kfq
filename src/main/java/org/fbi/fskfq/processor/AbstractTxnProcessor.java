@@ -38,7 +38,7 @@ public abstract class AbstractTxnProcessor extends Stdp10Processor {
     protected static String TPS_ENCODING = "GBK";  //第三方服务器编码方式
     private Logger logger = LoggerFactory.getLogger(this.getClass());
 
-    protected static String tps_authcode = "";
+    //protected static String tps_authcode = "";
 
     @Override
     public void service(Stdp10ProcessorRequest request, Stdp10ProcessorResponse response) throws ProcessorException, IOException {
@@ -123,13 +123,13 @@ public abstract class AbstractTxnProcessor extends Stdp10Processor {
     //生成第三方服务器通讯报文头
     protected byte[] generateTpsTxMsgHeader(TpsTia tpstia, Stdp10ProcessorRequest request) throws UnsupportedEncodingException {
         String isSign = "0";
-/*
+
         String authCode = (String)request.getProcessorContext().getAttribute(CONTEXT_TPS_AUTHCODE);
         if (StringUtils.isEmpty(authCode)) {
             authCode = ProjectConfigManager.getInstance().getProperty("authCode");
         }
-*/
-        String authCode = this.tps_authcode;
+
+        //String authCode = this.tps_authcode;
         if (StringUtils.isEmpty(authCode)) {
             authCode = ProjectConfigManager.getInstance().getProperty("authCode");
         }
