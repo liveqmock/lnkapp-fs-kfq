@@ -4,6 +4,7 @@ import org.apache.ibatis.session.SqlSession;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.fbi.fskfq.domain.cbs.T4013Request.CbsTia4013;
 import org.fbi.fskfq.domain.cbs.T4013Request.CbsTia4013Item;
+import org.fbi.fskfq.domain.cbs.T4013Response.CbsToa4013;
 import org.fbi.fskfq.domain.tps.base.TpsTia;
 import org.fbi.fskfq.domain.tps.base.TpsToaXmlBean;
 import org.fbi.fskfq.domain.tps.txn.TpsTia2457;
@@ -87,7 +88,9 @@ public class T4013Processor extends AbstractTxnProcessor {
                         marshalAbnormalCbsResponse(TxnRtnCode.TXN_EXECUTE_FAILED, rtnStatus, response);
                     } else {
                         processTxn(cbsTia, request, tpsToa);
-                        marshalSuccessTxnCbsResponse(response);
+                        String cbsRespMsg = generateCbsRespMsg(tpsToa);
+                        response.setHeader("rtnCode", TxnRtnCode.TXN_EXECUTE_SECCESS.getCode());
+                        response.setResponseBody(cbsRespMsg.getBytes(response.getCharacterEncoding()));
                     }
                 }
             } catch (Exception e) {
@@ -231,6 +234,8 @@ public class T4013Processor extends AbstractTxnProcessor {
             paymentInfo.setLnkBillStatus(BillStatus.PAYOFF.getCode()); //已缴款
             paymentInfo.setManualFlag("1"); //手工票
 
+            paymentInfo.setArchiveFlag("0");
+
             paymentInfo.setPkid(UUID.randomUUID().toString());
 
             FsKfqPaymentInfoMapper infoMapper = session.getMapper(FsKfqPaymentInfoMapper.class);
@@ -242,6 +247,24 @@ public class T4013Processor extends AbstractTxnProcessor {
         } finally {
             session.close();
         }
+    }
+
+    //生成CBS响应报文
+    private String generateCbsRespMsg(TpsToaXmlBean tpsToa) {
+        CbsToa4013 cbsToa = new CbsToa4013();
+        Map<String,String> toaMap = tpsToa.getMaininfoMap();
+        FbiBeanUtils.copyProperties(toaMap, cbsToa, true);
+
+        String cbsRespMsg = "";
+        Map<String, Object> modelObjectsMap = new HashMap<String, Object>();
+        modelObjectsMap.put(cbsToa.getClass().getName(), cbsToa);
+        SeperatedTextDataFormat cbsDataFormat = new SeperatedTextDataFormat(cbsToa.getClass().getPackage().getName());
+        try {
+            cbsRespMsg = (String) cbsDataFormat.toMessage(modelObjectsMap);
+        } catch (Exception e) {
+            throw new RuntimeException("特色平台报文转换失败.", e);
+        }
+        return cbsRespMsg;
     }
 
 }

@@ -59,7 +59,7 @@ public class T4010Processor extends AbstractTxnProcessor {
             String billStatus = paymentInfo_db.getLnkBillStatus();
             if (billStatus.equals(BillStatus.INIT.getCode())) { //未缴款，但本地已存在信息
                 List<FsKfqPaymentItem> paymentItems = selectPaymentItemsFromDB(paymentInfo_db);
-                String starringRespMsg = getRespMsgForStarring(paymentInfo_db, paymentItems);
+                String starringRespMsg = generateCbsRespMsg(paymentInfo_db, paymentItems);
                 response.setHeader("rtnCode", TxnRtnCode.TXN_EXECUTE_SECCESS.getCode());
                 response.setResponseBody(starringRespMsg.getBytes(response.getCharacterEncoding()));
                 return;
@@ -114,7 +114,7 @@ public class T4010Processor extends AbstractTxnProcessor {
         }
 
         //处理第三方返回业务报文--
-        String starringRespMsg = "";
+        String cbsRespMsg = "";
 
         String result = tpsToa.getMaininfoMap().get("RESULT");
         if (result != null) { //异常业务报文
@@ -163,9 +163,9 @@ public class T4010Processor extends AbstractTxnProcessor {
 
         //==特色平台响应==
         try {
-            starringRespMsg = getRespMsgForStarring(paymentInfo, paymentItems);
+            cbsRespMsg = generateCbsRespMsg(paymentInfo, paymentItems);
             response.setHeader("rtnCode", TxnRtnCode.TXN_EXECUTE_SECCESS.getCode());
-            response.setResponseBody(starringRespMsg.getBytes(response.getCharacterEncoding()));
+            response.setResponseBody(cbsRespMsg.getBytes(response.getCharacterEncoding()));
         } catch (Exception e) {
             logger.error("特色平台响应报文处理失败.", e);
             throw new RuntimeException(e);
@@ -204,7 +204,7 @@ public class T4010Processor extends AbstractTxnProcessor {
 
 
     //生成CBS响应报文
-    private String getRespMsgForStarring(FsKfqPaymentInfo paymentInfo, List<FsKfqPaymentItem> paymentItems) {
+    private String generateCbsRespMsg(FsKfqPaymentInfo paymentInfo, List<FsKfqPaymentItem> paymentItems) {
         CbsToa4010 cbsToa = new CbsToa4010();
         FbiBeanUtils.copyProperties(paymentInfo, cbsToa);
 
@@ -217,16 +217,16 @@ public class T4010Processor extends AbstractTxnProcessor {
         cbsToa.setItems(cbsToaItems);
         cbsToa.setItemNum("" + cbsToaItems.size());
 
-        String starringRespMsg = "";
+        String cbsRespMsg = "";
         Map<String, Object> modelObjectsMap = new HashMap<String, Object>();
         modelObjectsMap.put(cbsToa.getClass().getName(), cbsToa);
-        SeperatedTextDataFormat starringDataFormat = new SeperatedTextDataFormat(cbsToa.getClass().getPackage().getName());
+        SeperatedTextDataFormat cbsDataFormat = new SeperatedTextDataFormat(cbsToa.getClass().getPackage().getName());
         try {
-            starringRespMsg = (String) starringDataFormat.toMessage(modelObjectsMap);
+            cbsRespMsg = (String) cbsDataFormat.toMessage(modelObjectsMap);
         } catch (Exception e) {
             throw new RuntimeException("特色平台报文转换失败.", e);
         }
-        return starringRespMsg;
+        return cbsRespMsg;
     }
 
     //=======业务逻辑处理=================================================
