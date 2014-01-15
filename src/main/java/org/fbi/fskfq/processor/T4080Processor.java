@@ -41,7 +41,7 @@ public class T4080Processor extends AbstractTxnProcessor {
             tia = getCbsTia(request.getRequestBody());
         } catch (Exception e) {
             logger.error("特色业务平台请求报文解析错误.", e);
-            response.setHeader("rtnCode", TxnRtnCode.CBSMSG_UNMARSHAL_FAILED.getCode());
+            marshalAbnormalCbsResponse(TxnRtnCode.CBSMSG_UNMARSHAL_FAILED, null, response);
             return;
         }
 

@@ -77,6 +77,9 @@ public abstract class AbstractTxnProcessor extends Stdp10Processor {
     }
     //打包cbs异常报文
     protected void marshalAbnormalCbsResponse(TxnRtnCode txnRtnCode, String errMsg, Stdp10ProcessorResponse response) {
+        if (errMsg == null) {
+            errMsg = txnRtnCode.getTitle();
+        }
         String msg = getErrorRespMsgForStarring(errMsg);
         response.setHeader("rtnCode", txnRtnCode.getCode());
         try {

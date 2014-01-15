@@ -15,20 +15,22 @@ public class CbsToa4099 {
     @DataField(seq = 1)
     private String chrId;            //缴款书ID
     @DataField(seq = 2)
-    private String billtypeName;     //缴款书样式名称
+    private String billtypeCode;     //缴款书样式编码
     @DataField(seq = 3)
-    private String billNo;           //票号
+    private String billtypeName;     //缴款书样式名称
     @DataField(seq = 4)
-    private String makedate;         //开票日期
+    private String billNo;           //票号
     @DataField(seq = 5)
-    private String setYear;          //业务年度
+    private String makedate;         //开票日期
     @DataField(seq = 6)
-    private BigDecimal billMoney;    //收款金额
+    private String setYear;          //业务年度
     @DataField(seq = 7)
-    private String operPayTlrid;     //缴款柜员
+    private BigDecimal billMoney;    //收款金额
     @DataField(seq = 8)
-    private String operPayDate;      //缴款日期
+    private String operPayTlrid;     //缴款柜员
     @DataField(seq = 9)
+    private String operPayDate;      //缴款日期
+    @DataField(seq = 10)
     private String operPayTime;      //缴款时间
 
     public String getChrId() {
@@ -103,10 +105,19 @@ public class CbsToa4099 {
         this.operPayTime = operPayTime;
     }
 
+    public String getBilltypeCode() {
+        return billtypeCode;
+    }
+
+    public void setBilltypeCode(String billtypeCode) {
+        this.billtypeCode = billtypeCode;
+    }
+
     @Override
     public String toString() {
         return "CbsToa4099{" +
                 "chrId='" + chrId + '\'' +
+                ", billtypeCode='" + billtypeCode + '\'' +
                 ", billtypeName='" + billtypeName + '\'' +
                 ", billNo='" + billNo + '\'' +
                 ", makedate='" + makedate + '\'' +

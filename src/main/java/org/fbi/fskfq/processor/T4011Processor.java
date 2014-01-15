@@ -41,7 +41,7 @@ public class T4011Processor extends AbstractTxnProcessor {
             cbsTia = getCbsTia(request.getRequestBody());
         } catch (Exception e) {
             logger.error("特色业务平台请求报文解析错误.", e);
-            response.setHeader("rtnCode", TxnRtnCode.CBSMSG_UNMARSHAL_FAILED.getCode());
+            marshalAbnormalCbsResponse(TxnRtnCode.CBSMSG_UNMARSHAL_FAILED, null, response);
             return;
         }
 
@@ -53,11 +53,11 @@ public class T4011Processor extends AbstractTxnProcessor {
         } else {
             String billStatus = paymentInfo.getLnkBillStatus();
             if (billStatus.equals(BillStatus.PAYOFF.getCode())) { //已缴款
-                response.setHeader("rtnCode", TxnRtnCode.TXN_PAY_REPEATED.getCode());
+                marshalAbnormalCbsResponse(TxnRtnCode.TXN_PAY_REPEATED, null, response);
                 logger.info("===此笔缴款单已缴款.");
                 return;
             }else if (!billStatus.equals(BillStatus.INIT.getCode())) {  //非初始状态
-                response.setHeader("rtnCode", TxnRtnCode.TXN_PAY_REPEATED.getCode());
+                marshalAbnormalCbsResponse(TxnRtnCode.TXN_EXECUTE_FAILED, "此笔缴款单状态错误", response);
                 logger.info("===此笔缴款单状态错误.");
                 return;
             }
@@ -77,7 +77,7 @@ public class T4011Processor extends AbstractTxnProcessor {
                 marshalAbnormalCbsResponse(TxnRtnCode.TXN_EXECUTE_FAILED, tpsToa9000.getAddWord(), response);
             } catch (Exception e) {
                 logger.error("第三方服务器响应报文解析异常.", e);
-                response.setHeader("rtnCode", TxnRtnCode.TXN_EXECUTE_FAILED.getCode());
+                marshalAbnormalCbsResponse(TxnRtnCode.TXN_EXECUTE_FAILED, "第三方服务器响应报文解析异常.", response);
             }
         } else { //正常交易逻辑处理
             try {

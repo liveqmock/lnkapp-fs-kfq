@@ -49,7 +49,7 @@ public class T4010Processor extends AbstractTxnProcessor {
             logger.info("特色业务平台请求报文TIA:" + tia.toString());
         } catch (Exception e) {
             logger.error("特色业务平台请求报文解析错误.", e);
-            response.setHeader("rtnCode", TxnRtnCode.CBSMSG_UNMARSHAL_FAILED.getCode());
+            marshalAbnormalCbsResponse(TxnRtnCode.CBSMSG_UNMARSHAL_FAILED, null, response);
             return;
         }
 
@@ -66,7 +66,7 @@ public class T4010Processor extends AbstractTxnProcessor {
             }
 
             if (billStatus.equals(BillStatus.PAYOFF.getCode())) { //已缴款
-                response.setHeader("rtnCode", TxnRtnCode.TXN_PAY_REPEATED.getCode());
+                marshalAbnormalCbsResponse(TxnRtnCode.TXN_PAY_REPEATED, null, response);
                 logger.info("===此笔缴款单已缴款.");
                 return;
             }
@@ -81,7 +81,7 @@ public class T4010Processor extends AbstractTxnProcessor {
             sendTpsBuf = generateTpsTxMsgHeader(tpsTia, request);
         } catch (Exception e) {
             logger.error("生成第三方服务器请求报文时出错.", e);
-            response.setHeader("rtnCode", TxnRtnCode.TPSMSG_MARSHAL_FAILED.getCode());
+            marshalAbnormalCbsResponse(TxnRtnCode.TPSMSG_MARSHAL_FAILED, null, response);
             return;
         }
 
@@ -105,11 +105,11 @@ public class T4010Processor extends AbstractTxnProcessor {
             }
         } catch (SocketTimeoutException e) {
             logger.error("与第三方服务器通讯处理超时.", e);
-            response.setHeader("rtnCode", TxnRtnCode.MSG_RECV_TIMEOUT.getCode());
+            marshalAbnormalCbsResponse(TxnRtnCode.MSG_RECV_TIMEOUT, null, response);
             return;
         } catch (Exception e) {
             logger.error("与第三方服务器通讯处理异常.", e);
-            response.setHeader("rtnCode", TxnRtnCode.MSG_COMM_ERROR.getCode());
+            marshalAbnormalCbsResponse(TxnRtnCode.MSG_COMM_ERROR, null, response);
             return;
         }
 
@@ -125,7 +125,7 @@ public class T4010Processor extends AbstractTxnProcessor {
                 return;
             } catch (Exception e) {
                 logger.error("第三方服务器响应报文解析异常.", e);
-                response.setHeader("rtnCode", TxnRtnCode.TXN_EXECUTE_FAILED.getCode());
+                marshalAbnormalCbsResponse(TxnRtnCode.TXN_EXECUTE_FAILED, "第三方服务器响应报文解析异常.", response);
                 return;
             }
         }
@@ -142,7 +142,7 @@ public class T4010Processor extends AbstractTxnProcessor {
             }
         } catch (Exception e) {
             logger.error("第三方服务器响应报文解析异常.", e);
-            response.setHeader("rtnCode", TxnRtnCode.TXN_EXECUTE_FAILED.getCode());
+            marshalAbnormalCbsResponse(TxnRtnCode.TXN_EXECUTE_FAILED, "第三方服务器响应报文解析异常.", response);
             return;
         }
 
@@ -190,17 +190,6 @@ public class T4010Processor extends AbstractTxnProcessor {
         generateTpsBizMsgHeader(tpstia, "2401", request);
         return tpstia;
     }
-
-
-    //第三方服务器通讯
-/*
-    private TpsToaXmlBean sendAndRecvForTps(byte[] sendTpsBuf, String txnCode) throws Exception {
-        byte[] recvBuf = processThirdPartyServer(sendTpsBuf, txnCode);
-        logger.info("第三方服务器返回报文：\n" + new String(recvBuf, "GBK"));
-
-        return transXmlToBeanForTps(recvBuf);
-    }
-*/
 
 
     //生成CBS响应报文

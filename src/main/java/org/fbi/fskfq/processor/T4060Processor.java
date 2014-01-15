@@ -40,7 +40,7 @@ public class T4060Processor extends AbstractTxnProcessor {
             logger.info("特色业务平台请求报文TIA:" + tia.toString());
         } catch (Exception e) {
             logger.error("特色业务平台请求报文解析错误.", e);
-            response.setHeader("rtnCode", TxnRtnCode.CBSMSG_UNMARSHAL_FAILED.getCode());
+            marshalAbnormalCbsResponse(TxnRtnCode.CBSMSG_UNMARSHAL_FAILED, null, response);
             return;
         }
 
