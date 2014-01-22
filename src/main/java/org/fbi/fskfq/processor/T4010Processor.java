@@ -159,6 +159,7 @@ public class T4010Processor extends AbstractTxnProcessor {
         } catch (Exception e) {
             marshalAbnormalCbsResponse(TxnRtnCode.TXN_EXECUTE_FAILED, e.getMessage(), response);
             logger.error("业务处理失败.", e);
+            return;
         }
 
         //==特色平台响应==
