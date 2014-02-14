@@ -1,5 +1,6 @@
 package org.fbi.fskfq.processor;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.ibatis.session.SqlSession;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.fbi.fskfq.domain.cbs.T4011Request.CbsTia4011;
@@ -124,12 +125,18 @@ public class T4011Processor extends AbstractTxnProcessor {
             String rtnDataType = substr(recvTpsMsg, "<dataType>", "</dataType>").trim();
             if ("9910".equals(rtnDataType)) { //技术性异常报文 9910
                 TpsToa9910 tpsToa9910 = transXmlToBeanForTps9910(recvTpsBuf);
-                //TODO 发起签到交易
-                T9905Processor t9905Processor = new T9905Processor();
-                t9905Processor.doRequest(request, response);
-
+                String errType = tpsToa9910.Body.Object.Record.result;
+                String errMsg = tpsToa9910.Body.Object.Record.add_word;
+                if (StringUtils.isNotEmpty(errType) && "E301".equals(errType)) { //发起签到交易
+                    T9905Processor t9905Processor = new T9905Processor();
+                    t9905Processor.doRequest(request, response);
+                    errMsg = "授权码变动,请重新发起交易.";
+                } else { //返回前台错误信息
+                    if (StringUtils.isEmpty(errMsg)) errMsg = "财政返回:服务器异常";
+                    else errMsg = "财政返回:" + errMsg;
+                }
+                marshalAbnormalCbsResponse(TxnRtnCode.TXN_EXECUTE_FAILED, errMsg, response);
                 logger.info("===第三方服务器返回报文(异常业务信息类)：\n" + tpsToa9910.toString());
-                marshalAbnormalCbsResponse(TxnRtnCode.TXN_EXECUTE_FAILED, tpsToa9910.Body.Object.Record.add_word, response);
                 return null;
             } else { //业务类正常或异常报文 1402
                 tpsToa = transXmlToBeanForTps(recvTpsBuf);
