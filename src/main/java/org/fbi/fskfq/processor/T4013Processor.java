@@ -16,8 +16,10 @@ import org.fbi.fskfq.enums.TxnRtnCode;
 import org.fbi.fskfq.helper.FbiBeanUtils;
 import org.fbi.fskfq.helper.MybatisFactory;
 import org.fbi.fskfq.repository.dao.FsKfqPaymentInfoMapper;
+import org.fbi.fskfq.repository.dao.FsKfqPaymentItemMapper;
 import org.fbi.fskfq.repository.model.FsKfqPaymentInfo;
 import org.fbi.fskfq.repository.model.FsKfqPaymentInfoExample;
+import org.fbi.fskfq.repository.model.FsKfqPaymentItem;
 import org.fbi.linking.codec.dataformat.SeperatedTextDataFormat;
 import org.fbi.linking.processor.ProcessorException;
 import org.fbi.linking.processor.standprotocol10.Stdp10ProcessorRequest;
@@ -246,8 +248,19 @@ public class T4013Processor extends AbstractTxnProcessor {
 
             paymentInfo.setPkid(UUID.randomUUID().toString());
 
+            //Info
             FsKfqPaymentInfoMapper infoMapper = session.getMapper(FsKfqPaymentInfoMapper.class);
             infoMapper.insert(paymentInfo);
+
+            //Items
+            FsKfqPaymentItemMapper itemMapper = session.getMapper(FsKfqPaymentItemMapper.class);
+            for (CbsTia4013Item cbsTia4013Item : cbsTia.getItems()) {
+                FsKfqPaymentItem item = new FsKfqPaymentItem();
+                FbiBeanUtils.copyProperties(cbsTia4013Item, item);
+                item.setMainPkid(paymentInfo.getPkid());
+                itemMapper.insert(item);
+            }
+
             session.commit();
         } catch (Exception e) {
             session.rollback();
