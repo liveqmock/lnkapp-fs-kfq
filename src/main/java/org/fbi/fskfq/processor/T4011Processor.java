@@ -210,6 +210,11 @@ public class T4011Processor extends AbstractTxnProcessor {
             paymentInfo.setSetYear(cbsTia.getSetYear());
             paymentInfo.setBilltypeCode(cbsTia.getBilltypeCode());
 
+            //20141210  zhanrui 新增三个字段
+            paymentInfo.setReceiver(cbsTia.getReceiver());
+            paymentInfo.setReceiveraccount(cbsTia.getReceiveraccount());
+            paymentInfo.setReceiverbank(cbsTia.getReceiverbank());
+
             //paymentInfo.setBusinessId(request.getHeader("serialNo"));
             paymentInfo.setOperPayBankid(request.getHeader("branchId"));
             paymentInfo.setOperPayTlrid(request.getHeader("tellerId"));

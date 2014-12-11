@@ -26,6 +26,8 @@ public class CbsTia4010 {
 
     @DataField(seq = 5)
     private String setYear;
+    @DataField(seq = 6)
+    private String areaCode;
 
     public String getBilltypeCode() {
         return billtypeCode;
@@ -67,14 +69,23 @@ public class CbsTia4010 {
         this.setYear = setYear;
     }
 
+    public String getAreaCode() {
+        return areaCode;
+    }
+
+    public void setAreaCode(String areaCode) {
+        this.areaCode = areaCode;
+    }
+
     @Override
     public String toString() {
-        return "TIA4010{" +
+        return "CbsTia4010{" +
                 "billtypeCode='" + billtypeCode + '\'' +
                 ", billNo='" + billNo + '\'' +
                 ", verifyNo='" + verifyNo + '\'' +
                 ", billMoney=" + billMoney +
                 ", setYear='" + setYear + '\'' +
+                ", areaCode='" + areaCode + '\'' +
                 '}';
     }
 }

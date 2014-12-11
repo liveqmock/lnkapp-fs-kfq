@@ -14,13 +14,16 @@ public class CbsTia4080 {
     private String rptType;
 
     @DataField(seq = 2)
-    private String areaCode;   //财证编码
+    private String fisAreaCode;   //财证编码
 
     @DataField(seq = 3)
     private String startDate;
 
     @DataField(seq = 4)
     private String endDate;
+
+    @DataField(seq = 5)
+    private String areaCode;   //财证编码
 
     public String getRptType() {
         return rptType;

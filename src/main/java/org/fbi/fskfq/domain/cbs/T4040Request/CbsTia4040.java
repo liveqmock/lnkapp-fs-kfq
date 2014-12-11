@@ -22,6 +22,9 @@ public class CbsTia4040 {
     @DataField(seq = 4)
     private String setYear;
 
+    @DataField(seq = 5)
+    private String areaCode;
+
     public String getChrId() {
         return chrId;
     }
@@ -61,6 +64,7 @@ public class CbsTia4040 {
                 ", billtypeCode='" + billtypeCode + '\'' +
                 ", billNo='" + billNo + '\'' +
                 ", setYear='" + setYear + '\'' +
+                ", areaCode='" + areaCode + '\'' +
                 '}';
     }
 }

@@ -50,6 +50,17 @@ public class CbsTia4011 {
     @DataField(seq = 14)
     private String businessId;
 
+    @DataField(seq = 15)
+    private String receiver;
+
+    @DataField(seq = 16)
+    private String receiverbank;
+
+    @DataField(seq = 17)
+    private String receiveraccount;
+
+    @DataField(seq = 18)
+    private String areaCode;
     public String getChrId() {
         return chrId;
     }
@@ -162,6 +173,38 @@ public class CbsTia4011 {
         this.billMoney = billMoney;
     }
 
+    public String getAreaCode() {
+        return areaCode;
+    }
+
+    public void setAreaCode(String areaCode) {
+        this.areaCode = areaCode;
+    }
+
+    public String getReceiver() {
+        return receiver;
+    }
+
+    public void setReceiver(String receiver) {
+        this.receiver = receiver;
+    }
+
+    public String getReceiverbank() {
+        return receiverbank;
+    }
+
+    public void setReceiverbank(String receiverbank) {
+        this.receiverbank = receiverbank;
+    }
+
+    public String getReceiveraccount() {
+        return receiveraccount;
+    }
+
+    public void setReceiveraccount(String receiveraccount) {
+        this.receiveraccount = receiveraccount;
+    }
+
     @Override
     public String toString() {
         return "CbsTia4011{" +
@@ -179,6 +222,10 @@ public class CbsTia4011 {
                 ", routeUserCode='" + routeUserCode + '\'' +
                 ", license='" + license + '\'' +
                 ", businessId='" + businessId + '\'' +
+                ", receiver='" + receiver + '\'' +
+                ", receiverbank='" + receiverbank + '\'' +
+                ", receiveraccount='" + receiveraccount + '\'' +
+                ", areaCode='" + areaCode + '\'' +
                 '}';
     }
 }

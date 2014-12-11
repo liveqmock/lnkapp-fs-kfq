@@ -79,9 +79,12 @@ public class CbsTia4013 {
     private String remark;
 
     @DataField(seq = 22)
-    private String itemNum;
+    private String areaCode;
 
     @DataField(seq = 23)
+    private String itemNum;
+
+    @DataField(seq = 24)
     @OneToMany(mappedTo = "org.fbi.fskfq.domain.cbs.T4013Request.CbsTia4013Item", totalNumberField = "itemNum")
     private java.util.List<CbsTia4013Item> items;
 
@@ -270,9 +273,17 @@ public class CbsTia4013 {
         this.items = items;
     }
 
+    public String getAreaCode() {
+        return areaCode;
+    }
+
+    public void setAreaCode(String areaCode) {
+        this.areaCode = areaCode;
+    }
+
     @Override
     public String toString() {
-        return "CbsTia4030{" +
+        return "CbsTia4013{" +
                 "rgCode='" + rgCode + '\'' +
                 ", billtypeCode='" + billtypeCode + '\'' +
                 ", billNo='" + billNo + '\'' +
@@ -294,6 +305,7 @@ public class CbsTia4013 {
                 ", receiveraccount='" + receiveraccount + '\'' +
                 ", isConsign='" + isConsign + '\'' +
                 ", remark='" + remark + '\'' +
+                ", areaCode='" + areaCode + '\'' +
                 ", itemNum='" + itemNum + '\'' +
                 ", items=" + items +
                 '}';
