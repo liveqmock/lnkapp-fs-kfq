@@ -57,7 +57,7 @@ public class T4013Processor extends AbstractTxnProcessor {
                 marshalAbnormalCbsResponse(TxnRtnCode.TXN_PAY_REPEATED, null, response);
                 logger.info("===此笔缴款单已缴款.");
                 return;
-            }else if (!billStatus.equals(BillStatus.INIT.getCode())) {  //非初始状态
+            } else if (!billStatus.equals(BillStatus.INIT.getCode())) {  //非初始状态
                 marshalAbnormalCbsResponse(TxnRtnCode.TXN_EXECUTE_FAILED, "此笔缴款单状态错误", response);
                 logger.info("===此笔缴款单状态错误.");
                 return;
@@ -194,7 +194,7 @@ public class T4013Processor extends AbstractTxnProcessor {
 
         List<TpsTia2457.BodyRecord.DetailRecord> detailRecords = new ArrayList<>();
         for (CbsTia4013Item cbsTia4013Item : cbstia.getItems()) {
-            TpsTia2457.BodyRecord.DetailRecord   detailRecord = new TpsTia2457.BodyRecord.DetailRecord();
+            TpsTia2457.BodyRecord.DetailRecord detailRecord = new TpsTia2457.BodyRecord.DetailRecord();
             FbiBeanUtils.copyProperties(cbsTia4013Item, detailRecord, true);
             detailRecords.add(detailRecord);
         }
@@ -209,11 +209,13 @@ public class T4013Processor extends AbstractTxnProcessor {
         FsKfqPaymentInfo paymentInfo = new FsKfqPaymentInfo();
         FbiBeanUtils.copyProperties(cbsTia, paymentInfo);
 
-        Map<String,String> toaMap = tpsToa.getMaininfoMap();
+        Map<String, String> toaMap = tpsToa.getMaininfoMap();
         paymentInfo.setChrId(toaMap.get("CHR_ID"));
         paymentInfo.setBilltypeCode(toaMap.get("BILLTYPE_CODE"));
         paymentInfo.setBilltypeName(toaMap.get("BILLTYPE_NAME"));
-        paymentInfo.setVerifyNo(toaMap.get("VERIFY_NO"));
+        // 2457不返回校验码 需从cbstia中获取,来自前端界面录入
+        // paymentInfo.setVerifyNo(toaMap.get("VERIFY_NO"));
+        paymentInfo.setVerifyNo(cbsTia.getVerifyNo());
         paymentInfo.setMakedate(toaMap.get("MAKEDATE"));
         paymentInfo.setIenCode(toaMap.get("IEN_CODE"));
         paymentInfo.setIenName(toaMap.get("IEN_NAME"));
@@ -234,7 +236,19 @@ public class T4013Processor extends AbstractTxnProcessor {
             paymentInfo.setOperPayTime(new SimpleDateFormat("HHmmss").format(new Date()));
             paymentInfo.setOperPayHostsn(request.getHeader("serialNo"));
 
-            paymentInfo.setHostBookFlag("1");
+            // 2014-12-23 4013交易对应财政2457手工票录入交易，即手工票的缴款分为录入和缴费两步进行，本交易仅做录入处理。缴费同机打票查询缴费。
+            paymentInfo.setHostBookFlag("0");
+            paymentInfo.setHostChkFlag("0");
+            paymentInfo.setFbBookFlag("0");
+            paymentInfo.setFbChkFlag("0");
+
+            paymentInfo.setAreaCode("KaiFaQu-FeiShui");
+            paymentInfo.setHostAckFlag("0");
+            paymentInfo.setLnkBillStatus(BillStatus.INIT.getCode()); // 未缴款
+            paymentInfo.setManualFlag("1"); //手工票
+
+
+           /* paymentInfo.setHostBookFlag("1");
             paymentInfo.setHostChkFlag("0");
             paymentInfo.setFbBookFlag("1");
             paymentInfo.setFbChkFlag("0");
@@ -242,7 +256,7 @@ public class T4013Processor extends AbstractTxnProcessor {
             paymentInfo.setAreaCode("KaiFaQu-FeiShui");
             paymentInfo.setHostAckFlag("0");
             paymentInfo.setLnkBillStatus(BillStatus.PAYOFF.getCode()); //已缴款
-            paymentInfo.setManualFlag("1"); //手工票
+            paymentInfo.setManualFlag("1"); //手工票*/
 
             paymentInfo.setArchiveFlag("0");
 
@@ -273,7 +287,7 @@ public class T4013Processor extends AbstractTxnProcessor {
     //生成CBS响应报文
     private String generateCbsRespMsg(TpsToaXmlBean tpsToa) {
         CbsToa4013 cbsToa = new CbsToa4013();
-        Map<String,String> toaMap = tpsToa.getMaininfoMap();
+        Map<String, String> toaMap = tpsToa.getMaininfoMap();
         FbiBeanUtils.copyProperties(toaMap, cbsToa, true);
 
         String cbsRespMsg = "";

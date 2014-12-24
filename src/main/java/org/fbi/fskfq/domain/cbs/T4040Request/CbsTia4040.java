@@ -57,6 +57,15 @@ public class CbsTia4040 {
         this.setYear = setYear;
     }
 
+    public String getAreaCode() {
+        return areaCode;
+    }
+
+    public void setAreaCode(String areaCode) {
+        this.areaCode = areaCode;
+    }
+
+
     @Override
     public String toString() {
         return "CbsTia4040{" +

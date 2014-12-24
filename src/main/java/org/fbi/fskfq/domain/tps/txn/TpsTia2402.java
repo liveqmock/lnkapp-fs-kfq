@@ -94,6 +94,9 @@ public class TpsTia2402 extends TpsTia {
         private String route_user_code = "";
         private String license = "";
         private String business_id = "";
+        private String receiver = "";
+        private String receiveraccount = "";
+        private String receiverbank = "";
 
         public String getChr_id() {
             return chr_id;
@@ -205,6 +208,30 @@ public class TpsTia2402 extends TpsTia {
 
         public void setBusiness_id(String business_id) {
             this.business_id = business_id;
+        }
+
+        public String getReceiver() {
+            return receiver;
+        }
+
+        public void setReceiver(String receiver) {
+            this.receiver = receiver;
+        }
+
+        public String getReceiveraccount() {
+            return receiveraccount;
+        }
+
+        public void setReceiveraccount(String receiveraccount) {
+            this.receiveraccount = receiveraccount;
+        }
+
+        public String getReceiverbank() {
+            return receiverbank;
+        }
+
+        public void setReceiverbank(String receiverbank) {
+            this.receiverbank = receiverbank;
         }
     }
 

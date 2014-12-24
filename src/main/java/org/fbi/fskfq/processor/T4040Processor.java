@@ -15,6 +15,7 @@ import org.fbi.fskfq.enums.TxnRtnCode;
 import org.fbi.fskfq.helper.FbiBeanUtils;
 import org.fbi.fskfq.helper.MybatisFactory;
 import org.fbi.fskfq.repository.dao.FsKfqPaymentInfoMapper;
+import org.fbi.fskfq.repository.dao.common.CommonMapper;
 import org.fbi.fskfq.repository.model.FsKfqPaymentInfo;
 import org.fbi.fskfq.repository.model.FsKfqPaymentInfoExample;
 import org.fbi.linking.codec.dataformat.SeperatedTextDataFormat;
@@ -25,6 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.net.SocketTimeoutException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -33,6 +35,7 @@ import java.util.List;
 /**
  * Created by zhanrui on 13-12-31.
  * 撤销交易
+ * 撤销已缴款的机打票或删除已录入的未缴款的手工票    已缴款的手工票需先进行撤销缴款处理
  */
 public class T4040Processor extends AbstractTxnProcessor {
     private Logger logger = LoggerFactory.getLogger(this.getClass());
@@ -47,21 +50,29 @@ public class T4040Processor extends AbstractTxnProcessor {
             return;
         }
 
-        //检查本地数据库信息
-        FsKfqPaymentInfo paymentInfo = selectPayoffPaymentInfoFromDB(tia.getBillNo());
-        if (paymentInfo == null) {
-            marshalAbnormalCbsResponse(TxnRtnCode.TXN_EXECUTE_FAILED, "不存在已缴款的记录.", response);
-            return;
+        FsKfqPaymentInfo paymentInfo;
+
+        // 若为未缴款的手工票，则可继续业务处理
+        FsKfqPaymentInfo handBillInfo = selectHandNoPayPaymentInfoFromDB(tia.getBillNo());
+        if (handBillInfo != null) {
+            paymentInfo = handBillInfo;
+        } else {
+            //检查本地数据库信息
+            paymentInfo = selectPayoffPaymentInfoFromDB(tia.getBillNo());
+            if (paymentInfo == null) {
+                marshalAbnormalCbsResponse(TxnRtnCode.TXN_EXECUTE_FAILED, "不存在已缴款票据或录入的未缴款手工票.", response);
+                return;
+            }
         }
 
         //第三方处理
-        String  manualFlag = paymentInfo.getManualFlag();
+        String manualFlag = paymentInfo.getManualFlag();
         if (StringUtils.isEmpty(manualFlag)) {
             logger.error("手工票标志不能为空" + paymentInfo.getBillNo());
             marshalAbnormalCbsResponse(TxnRtnCode.TXN_EXECUTE_FAILED, "手工票标志不能为空", response);
             return;
         }
-        TpsToaXmlBean tpsToa = processTpsTx(tia, request, response, manualFlag);
+        TpsToaXmlBean tpsToa = processTpsTx(tia, request, response, paymentInfo);
         if (tpsToa == null) { //出现异常
             return;
         }
@@ -101,10 +112,16 @@ public class T4040Processor extends AbstractTxnProcessor {
     }
 
     //第三方通讯处理
-    private TpsToaXmlBean processTpsTx(CbsTia4040 tia, Stdp10ProcessorRequest request, Stdp10ProcessorResponse response, String  manualFlag) {
+    private TpsToaXmlBean processTpsTx(CbsTia4040 tia, Stdp10ProcessorRequest request, Stdp10ProcessorResponse response, FsKfqPaymentInfo paymentInfo) {
         TpsTia tpsTia;
-        if ("1".equals(manualFlag)) { //手工票
+        // 未缴款的手工票执行2458交易 已缴款的手工票须先执行撤销缴款2409
+        if ("1".equals(paymentInfo.getManualFlag()) && "0".equals(paymentInfo.getLnkBillStatus())) { //未缴款手工票
+
             tpsTia = assembleTpsRequestBean_2458(tia, request);
+            TpsTia2458.BodyRecord record = ((TpsTia2458.Body) tpsTia.getBody()).getObject().getRecord();
+            // 必须填入金额和区划码
+            record.setBill_money(qryBillMoney(paymentInfo.getPkid()).toString());
+            record.setRg_code(paymentInfo.getRgCode());
         } else {
             tpsTia = assembleTpsRequestBean_2409(tia, request);
         }
@@ -165,6 +182,29 @@ public class T4040Processor extends AbstractTxnProcessor {
         return tia;
     }
 
+    //查找未缴款的手工票缴款单记录
+    private FsKfqPaymentInfo selectHandNoPayPaymentInfoFromDB(String billNo) {
+        SqlSessionFactory sqlSessionFactory = MybatisFactory.ORACLE.getInstance();
+        FsKfqPaymentInfoMapper mapper;
+        try (SqlSession session = sqlSessionFactory.openSession()) {
+            mapper = session.getMapper(FsKfqPaymentInfoMapper.class);
+            FsKfqPaymentInfoExample example = new FsKfqPaymentInfoExample();
+            example.createCriteria()
+                    .andBillNoEqualTo(billNo)
+                    .andLnkBillStatusEqualTo(BillStatus.INIT.getCode())
+                    .andManualFlagEqualTo("1");
+
+            List<FsKfqPaymentInfo> infos = mapper.selectByExample(example);
+            if (infos.size() == 0) {
+                return null;
+            }
+            if (infos.size() != 1) {
+                throw new RuntimeException("记录状态错误.");
+            }
+            return infos.get(0);
+        }
+    }
+
     //查找已缴款未撤销的缴款单记录
     private FsKfqPaymentInfo selectPayoffPaymentInfoFromDB(String billNo) {
         SqlSessionFactory sqlSessionFactory = MybatisFactory.ORACLE.getInstance();
@@ -195,6 +235,7 @@ public class T4040Processor extends AbstractTxnProcessor {
         generateTpsBizMsgHeader(tpstia, "2409", request);
         return tpstia;
     }
+
     //手工票
     private TpsTia assembleTpsRequestBean_2458(CbsTia4040 cbstia, Stdp10ProcessorRequest request) {
         TpsTia2458 tpstia = new TpsTia2458();
@@ -226,7 +267,15 @@ public class T4040Processor extends AbstractTxnProcessor {
 
 //            paymentInfo.setAreaCode("KaiFaQu-FeiShui");
 //            paymentInfo.setHostAckFlag("0");
-            paymentInfo.setLnkBillStatus(BillStatus.CANCELED.getCode()); //已撤销
+            // 已缴款手工票，做撤销缴款处理，即恢复未缴款状态
+            if ("1".equals(paymentInfo.getManualFlag()) && "1".equals(paymentInfo.getLnkBillStatus())) {
+                paymentInfo.setLnkBillStatus(BillStatus.INIT.getCode()); // 未缴款
+                // 设置主机和财政局均未记账
+                paymentInfo.setHostBookFlag("0");
+                paymentInfo.setFbBookFlag("0");
+            } else {
+                paymentInfo.setLnkBillStatus(BillStatus.CANCELED.getCode()); //已撤销
+            }
 
             //TODO 应记录撤销交易的主机流水号
 
@@ -238,6 +287,14 @@ public class T4040Processor extends AbstractTxnProcessor {
             throw new RuntimeException("业务逻辑处理失败。", e);
         } finally {
             session.close();
+        }
+    }
+
+    private BigDecimal qryBillMoney(String pkid) {
+        SqlSessionFactory sqlSessionFactory = MybatisFactory.ORACLE.getInstance();
+        try (SqlSession session = sqlSessionFactory.openSession()) {
+            CommonMapper commonMapper = session.getMapper(CommonMapper.class);
+            return commonMapper.qryBillMoney(pkid);
         }
     }
 }
